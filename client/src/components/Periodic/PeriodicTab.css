@@ -1,0 +1,373 @@
+.periodic-tab {
+  padding: 20px;
+}
+
+.periodic-header {
+  margin-bottom: 25px;
+}
+
+.periodic-header h2 {
+  color: #9147ff;
+  margin-bottom: 8px;
+}
+
+.periodic-description {
+  color: #888;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+.restart-timers-btn {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.restart-timers-btn:hover {
+  background: #138496;
+}
+
+/* Список событий */
+.periodic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.empty-periodic {
+  text-align: center;
+  padding: 40px;
+  background: #2d2d2d;
+  border: 2px dashed #404040;
+  border-radius: 8px;
+  color: #888;
+}
+
+.empty-periodic .hint {
+  color: #666;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* Карточка события */
+.periodic-card {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.periodic-card:hover {
+  border-color: #9147ff;
+}
+
+.periodic-card.disabled {
+  opacity: 0.7;
+}
+
+.periodic-card.disabled .periodic-card-header {
+  background: #2a2a2a;
+}
+
+.periodic-card.disabled .periodic-name {
+  color: #666;
+}
+
+.periodic-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #363636;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.periodic-card-header:hover {
+  background: #404040;
+}
+
+.periodic-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.periodic-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #9147ff;
+}
+
+.periodic-type-badge {
+  background: #404040;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #aaa;
+  border: 1px solid #555;
+}
+
+.periodic-interval-badge {
+  background: rgba(23, 162, 184, 0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #17a2b8;
+  border: 1px solid #17a2b8;
+}
+
+.periodic-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trigger-btn {
+  background: none;
+  border: 1px solid #28a745;
+  color: #28a745;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trigger-btn:hover {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.periodic-editor-container {
+  padding: 20px;
+  border-top: 1px solid #404040;
+  background: #262626;
+}
+
+/* Редактор события */
+.periodic-editor {
+  padding: 10px;
+}
+
+.periodic-editor-header {
+  margin-bottom: 20px;
+}
+
+.periodic-name-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.periodic-name-input {
+  width: 100%;
+  max-width: 350px;
+  background: #404040;
+  border: 1px solid #555;
+  color: white;
+  padding: 12px 15px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.periodic-name-input:focus {
+  border-color: #9147ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(145, 71, 255, 0.2);
+}
+
+/* Настройка интервала */
+.interval-setting {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.interval-setting > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.interval-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.interval-input {
+  width: 150px;
+  background: #404040;
+  border: 1px solid #555;
+  color: white;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.interval-input:focus {
+  border-color: #9147ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(145, 71, 255, 0.2);
+}
+
+.interval-presets {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: #404040;
+  color: #aaa;
+  border: 1px solid #555;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: #505050;
+  color: white;
+  border-color: #17a2b8;
+}
+
+.preset-btn.active {
+  background: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+/* Секция создания нового события */
+.add-periodic-section {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.add-periodic-section h3 {
+  color: #9147ff;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.add-periodic-form {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.new-periodic-input {
+  flex: 2;
+  min-width: 250px;
+  background: #404040;
+  border: 1px solid #555;
+  color: white;
+  padding: 12px 15px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.new-periodic-type {
+  flex: 1;
+  min-width: 180px;
+  background: #404040;
+  border: 1px solid #555;
+  color: white;
+  padding: 12px 15px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.add-periodic-btn {
+  background: #9147ff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-periodic-btn:hover {
+  background: #7d5bbe;
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+
+@media (max-width: 768px) {
+  .periodic-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .periodic-name-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .periodic-name-input {
+    max-width: 100%;
+  }
+
+  .interval-presets {
+    flex-direction: column;
+  }
+
+  .preset-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .add-periodic-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .new-periodic-input,
+  .new-periodic-type,
+  .add-periodic-btn {
+    width: 100%;
+  }
+
+  .periodic-actions {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}

@@ -1,0 +1,36 @@
+/* client/src/components/ConfigControls.css */
+.config-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.config-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.config-btn.save {
+  background: #28a745;
+  color: white;
+}
+
+.config-btn.save:hover {
+  background: #218838;
+}
+
+.config-btn.load {
+  background: #007bff;
+  color: white;
+}
+
+.config-btn.load:hover {
+  background: #0056b3;
+}

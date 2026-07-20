@@ -1,0 +1,402 @@
+/* client/src/components/Events/EventsTab.css */
+
+.events-tab {
+  padding: 20px;
+}
+
+.events-tab h2 {
+  color: #9147ff;
+  margin-bottom: 10px;
+}
+
+.events-description {
+  color: #888;
+  margin-bottom: 25px;
+  font-size: 14px;
+}
+
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.event-card {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.event-card:hover { border-color: #9147ff; }
+.event-card.disabled { opacity: 0.7; }
+.event-card.disabled .event-card-header { background: #2a2a2a; }
+
+.event-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #363636;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.event-card-header:hover { background: #404040; }
+
+.event-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.event-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.event-type-badge {
+  background: #404040;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #aaa;
+  border: 1px solid #555;
+}
+
+.event-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-btn {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.test-btn:hover { background: #138496; }
+
+.event-editor-container {
+  padding: 20px;
+  border-top: 1px solid #404040;
+  background: #262626;
+}
+
+.event-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.event-meta {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.event-description {
+  color: #aaa;
+  margin-bottom: 10px;
+}
+
+.event-vars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vars-label {
+  color: #888;
+  font-size: 13px;
+}
+
+.var-badge {
+  background: rgba(145, 71, 255, 0.2);
+  color: #9147ff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+  border: 1px solid rgba(145, 71, 255, 0.3);
+}
+
+.event-type-selector {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.event-type-selector > label {
+  display: block;
+  color: #fff;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.type-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.type-btn {
+  background: #404040;
+  color: #aaa;
+  border: 1px solid #555;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  flex: 1;
+  min-width: 140px;
+  text-align: center;
+}
+
+.type-btn:hover { background: #505050; color: white; }
+.type-btn.active { background: #9147ff; color: white; border-color: #9147ff; }
+
+.event-section {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.event-section h4 {
+  color: #9147ff;
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+/* AUTO SHOUTOUT */
+.autoshoutout-section {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.autoshoutout-section h3 {
+  color: #9147ff;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shoutout-users-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 15px;
+  background: #363636;
+  border-radius: 8px;
+  min-height: 50px;
+}
+
+.empty-shoutout {
+  color: #666;
+  font-style: italic;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+}
+
+.shoutout-user-tag {
+  background: #404040;
+  border: 1px solid #555;
+  border-radius: 20px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.shoutout-user-tag:hover { border-color: #9147ff; }
+
+.shoutout-username { color: #fff; font-weight: 500; }
+
+.shoutout-done-badge {
+  font-size: 11px;
+  color: #28a745;
+  background: rgba(40, 167, 69, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.shoutout-queue-badge {
+  font-size: 11px;
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.shoutout-trigger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  transition: all 0.2s;
+}
+
+.shoutout-trigger-btn:hover { transform: scale(1.2); }
+
+.shoutout-remove-btn {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+
+.shoutout-remove-btn:hover { opacity: 1; }
+
+.add-shoutout-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.shoutout-input {
+  flex: 1;
+  background: #404040;
+  border: 1px solid #555;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.shoutout-input:focus { outline: none; border-color: #9147ff; }
+
+.add-shoutout-btn {
+  background: #9147ff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.add-shoutout-btn:hover { background: #7d5bbe; }
+
+.shoutout-status-box {
+  background: #363636;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.shoutout-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.shoutout-status-header h4 { color: #9147ff; font-size: 14px; }
+
+.reset-shoutout-btn {
+  background: #404040;
+  color: #aaa;
+  border: 1px solid #555;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.reset-shoutout-btn:hover { background: #505050; color: white; }
+
+.shoutout-status-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.shoutout-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shoutout-status-item .status-label {
+  color: #888;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.shoutout-status-item .status-value {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* MIXED SECTION (shared) */
+.mixed-section {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.mixed-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #404040;
+}
+
+.mixed-section-header h4 {
+  color: #9147ff;
+  font-size: 18px;
+  margin: 0;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .type-buttons { flex-direction: column; }
+  .type-btn { width: 100%; }
+  .add-shoutout-form { flex-direction: column; }
+  .add-shoutout-btn { width: 100%; justify-content: center; }
+  .shoutout-status-items { grid-template-columns: 1fr; }
+  .event-card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .event-actions { width: 100%; justify-content: flex-end; }
+}
