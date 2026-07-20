@@ -4,7 +4,6 @@ import { FaTrash, FaPlus, FaEye, FaEyeSlash, FaCopy } from 'react-icons/fa';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
 import './BanWordsTab.css';
 
-// Функция генерации алиасов (дублируется из сервера для клиента)
 function generateAliases(word) {
   if (!word) return [];
   const CHAR_MAP = {
@@ -56,16 +55,16 @@ function BanWordsTab({ words, onUpdate }) {
     }
 
     const aliases = generateAliases(newWord.trim());
-    
+
     const updated = [...words, {
       word: newWord.trim().toLowerCase(),
       type: newType,
       aliases: aliases
     }];
-    
+
     onUpdate(updated);
     setNewWord('');
-    
+
     showNotification(
       `✅ Слово "${newWord}" добавлено!\nСгенерировано ${aliases.length} вариантов`,
       NOTIFICATION_TYPES.SUCCESS,
@@ -96,10 +95,7 @@ function BanWordsTab({ words, onUpdate }) {
   };
 
   const toggleAliases = (index) => {
-    setExpandedAliases(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
+    setExpandedAliases(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   const copyAliases = (word, aliases) => {
@@ -111,13 +107,10 @@ function BanWordsTab({ words, onUpdate }) {
   const regenerateAliases = (index) => {
     const wordItem = words[index];
     const newAliases = generateAliases(wordItem.word);
-    
+
     const updated = [...words];
-    updated[index] = {
-      ...wordItem,
-      aliases: newAliases
-    };
-    
+    updated[index] = { ...wordItem, aliases: newAliases };
+
     onUpdate(updated);
     showNotification(
       `🔄 Алиасы для "${wordItem.word}" обновлены (${newAliases.length} вариантов)`,
@@ -133,7 +126,7 @@ function BanWordsTab({ words, onUpdate }) {
       <div className="banwords-header">
         <h2>🚫 Банворды с защитой от обхода</h2>
         <p className="banwords-description">
-          Автоматическое удаление сообщений с запрещёнными словами. 
+          Автоматическое удаление сообщений с запрещёнными словами.
           Система генерирует варианты с подменой букв (а→a, е→e, б→6 и т.д.)
         </p>
       </div>
@@ -187,40 +180,24 @@ function BanWordsTab({ words, onUpdate }) {
                   <span className="aliases-count">{item.aliases?.length || 0} вариантов</span>
                 </div>
                 <div className="word-actions">
-                  <button 
-                    onClick={() => toggleAliases(index)}
-                    className="show-aliases-btn"
-                    title={expandedAliases[index] ? "Скрыть варианты" : "Показать варианты"}
-                  >
+                  <button onClick={() => toggleAliases(index)} className="show-aliases-btn" title={expandedAliases[index] ? "Скрыть варианты" : "Показать варианты"}>
                     {expandedAliases[index] ? <FaEyeSlash /> : <FaEye />}
                     <span>{expandedAliases[index] ? 'Скрыть' : `${item.aliases?.length || 0}`}</span>
                   </button>
                   {item.aliases && item.aliases.length > 0 && (
-                    <button 
-                      onClick={() => copyAliases(item.word, item.aliases)}
-                      className="copy-aliases-btn"
-                      title="Копировать варианты"
-                    >
+                    <button onClick={() => copyAliases(item.word, item.aliases)} className="copy-aliases-btn" title="Копировать варианты">
                       <FaCopy />
                     </button>
                   )}
-                  <button 
-                    onClick={() => regenerateAliases(index)}
-                    className="regenerate-aliases-btn"
-                    title="Перегенерировать варианты"
-                  >
+                  <button onClick={() => regenerateAliases(index)} className="regenerate-aliases-btn" title="Перегенерировать варианты">
                     🔄
                   </button>
-                  <button 
-                    onClick={() => removeWord(index, item.word)} 
-                    className="remove-word-btn"
-                    title="Удалить слово"
-                  >
+                  <button onClick={() => removeWord(index, item.word)} className="remove-word-btn" title="Удалить слово">
                     <FaTrash />
                   </button>
                 </div>
               </div>
-              
+
               {expandedAliases[index] && item.aliases && (
                 <div className="aliases-list">
                   <div className="aliases-header">
@@ -246,7 +223,7 @@ function BanWordsTab({ words, onUpdate }) {
             value={newWord}
             onChange={(e) => setNewWord(e.target.value)}
             placeholder="например, спам"
-            onKeyPress={(e) => e.key === 'Enter' && addWord()}
+            onKeyDown={(e) => e.key === 'Enter' && addWord()}
           />
           <select value={newType} onChange={(e) => setNewType(e.target.value)}>
             <option value="hard">🔴 Жёсткий контроль</option>
@@ -257,7 +234,7 @@ function BanWordsTab({ words, onUpdate }) {
           </button>
         </div>
         <div className="form-hint">
-          ⚡️ Автоматически сгенерируются варианты с подменой букв: 
+          ⚡️ Автоматически сгенерируются варианты с подменой букв:
           а→a, е→e, б→6, р→p, с→c, и многие другие
         </div>
       </div>

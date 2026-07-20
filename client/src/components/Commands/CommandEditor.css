@@ -1,4 +1,5 @@
 /* client/src/components/Commands/CommandEditor.css */
+
 .command-editor {
   padding: 8px 0;
 }
@@ -86,39 +87,4 @@
   color: var(--accent);
   font-family: monospace;
   font-weight: 500;
-}
-
-.command-editor-actions {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.save-command-btn {
-  background: var(--success);
-  color: white;
-  border: none;
-  padding: 10px 28px;
-  border-radius: var(--border-radius-sm);
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.save-command-btn:hover:not(:disabled) {
-  background: var(--success-hover);
-  transform: translateY(-1px);
-}
-
-.save-command-btn:disabled,
-.save-command-btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
 }

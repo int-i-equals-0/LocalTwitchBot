@@ -4,14 +4,13 @@ import {
   FaTrash,
   FaUpload,
   FaFolderOpen,
-  FaToggleOn,
-  FaToggleOff,
   FaPlay,
   FaStop,
   FaSearch,
   FaVolumeUp,
 } from "react-icons/fa";
 import Tooltip from "../Tooltip";
+import { useNotification, NOTIFICATION_TYPES } from "../Notification/Notification";
 import "./MediaEditor.css";
 
 const FONT_FAMILIES = [
@@ -78,6 +77,7 @@ function MediaEditor({
   onChange,
   overlays = [],
 }) {
+  const { showNotification, showConfirm } = useNotification();
   const fileInputRef = useRef(null);
   const previewVideoRef = useRef(null);
   const previewAudioRef = useRef(null);
@@ -95,7 +95,6 @@ function MediaEditor({
   const [fileSearchQuery, setFileSearchQuery] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [previewAnimation, setPreviewAnimation] = useState("idle");
-  const [previewElement, setPreviewElement] = useState(null);
 
   useEffect(() => {
     loadMediaFiles();
@@ -107,9 +106,7 @@ function MediaEditor({
   }, [value]);
 
   useEffect(() => {
-    if (!showFileBrowser) {
-      setFileSearchQuery("");
-    }
+    if (!showFileBrowser) setFileSearchQuery("");
   }, [showFileBrowser]);
 
   useEffect(() => {
@@ -137,17 +134,10 @@ function MediaEditor({
       return;
     }
 
-    // Проверка на H.265 для видео
     if (file.type.startsWith("video/")) {
       const ext = file.name.split(".").pop().toLowerCase();
-      if (
-        ext === "hevc" ||
-        ext === "h265" ||
-        file.name.toLowerCase().includes("h265")
-      ) {
-        setErrorMessage(
-          "⚠️ Видео в формате H.265 может не воспроизводиться в браузере. Рекомендуется использовать H.264 (MP4)",
-        );
+      if (ext === "hevc" || ext === "h265" || file.name.toLowerCase().includes("h265")) {
+        setErrorMessage("⚠️ Видео в формате H.265 может не воспроизводиться в браузере. Рекомендуется использовать H.264 (MP4)");
       } else {
         setErrorMessage("");
       }
@@ -181,10 +171,12 @@ function MediaEditor({
         setSelectedFile(result.file.fileName);
         onChange({ ...value, file: result.file.fileName, enabled: true });
         setErrorMessage("");
+        showNotification(`✅ Файл "${result.file.fileName}" загружен`, NOTIFICATION_TYPES.SUCCESS, 2000);
       }
     } catch (error) {
       console.error("Ошибка загрузки:", error);
       setErrorMessage("❌ Ошибка загрузки файла");
+      showNotification("❌ Ошибка загрузки файла", NOTIFICATION_TYPES.ERROR, 3000);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -193,14 +185,8 @@ function MediaEditor({
   };
 
   const selectExistingFile = (file) => {
-    // Проверка на H.265
-    if (
-      file.type === "video" &&
-      (file.name.includes("h265") || file.name.includes("hevc"))
-    ) {
-      setErrorMessage(
-        "⚠️ Это видео может быть в формате H.265. Убедитесь, что браузер его поддерживает.",
-      );
+    if (file.type === "video" && (file.name.includes("h265") || file.name.includes("hevc"))) {
+      setErrorMessage("⚠️ Это видео может быть в формате H.265. Убедитесь, что браузер его поддерживает.");
     } else {
       setErrorMessage("");
     }
@@ -210,25 +196,28 @@ function MediaEditor({
     setFileSearchQuery("");
   };
 
-  const deleteFile = async (fileName, event) => {
+  const deleteFile = (fileName, event) => {
     event.stopPropagation();
-    if (!window.confirm(`Удалить файл ${fileName}?`)) return;
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:3001/api/media-files/${fileName}`,
-        { method: "DELETE" },
-      );
-      const data = await response.json();
-      if (data.success) {
-        await loadMediaFiles();
-        if (selectedFile === fileName) {
-          setSelectedFile("");
-          onChange({ ...value, file: "", enabled: value.enabled });
+    showConfirm(`Удалить файл "${fileName}"?`, async () => {
+      try {
+        const response = await fetch(
+          `http://127.0.0.1:3001/api/media-files/${fileName}`,
+          { method: "DELETE" }
+        );
+        const data = await response.json();
+        if (data.success) {
+          await loadMediaFiles();
+          if (selectedFile === fileName) {
+            setSelectedFile("");
+            onChange({ ...value, file: "", enabled: value.enabled });
+          }
+          showNotification(`🗑️ Файл "${fileName}" удалён`, NOTIFICATION_TYPES.SUCCESS, 2000);
         }
+      } catch (error) {
+        console.error("Ошибка удаления:", error);
+        showNotification("❌ Ошибка удаления файла", NOTIFICATION_TYPES.ERROR, 3000);
       }
-    } catch (error) {
-      console.error("Ошибка удаления:", error);
-    }
+    });
   };
 
   const updateMedia = (updates) => {
@@ -269,12 +258,9 @@ function MediaEditor({
   const getFileMediaType = (fileName) => {
     if (!fileName) return "unknown";
     const ext = fileName.split(".").pop().toLowerCase();
-    if (["mp4", "webm", "mov", "avi", "mkv", "flv", "m4v"].includes(ext))
-      return "video";
-    if (["mp3", "wav", "ogg", "m4a", "flac", "aac"].includes(ext))
-      return "audio";
-    if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext))
-      return "image";
+    if (["mp4", "webm", "mov", "avi", "mkv", "flv", "m4v"].includes(ext)) return "video";
+    if (["mp3", "wav", "ogg", "m4a", "flac", "aac"].includes(ext)) return "audio";
+    if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext)) return "image";
     return "unknown";
   };
 
@@ -299,7 +285,6 @@ function MediaEditor({
     const audio = previewAudioRef.current;
     const enterAnim = value.animation?.enter || "none";
 
-    // Функция для запуска воспроизведения после анимации входа
     const startPlayback = () => {
       if (video) {
         video.currentTime = 0;
@@ -315,15 +300,13 @@ function MediaEditor({
     };
 
     if (enterAnim !== "none") {
-      // Применяем анимацию входа
       if (video) {
         video.classList.remove(
           ...Array.from(video.classList).filter(
-            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-"),
-          ),
+            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-")
+          )
         );
         video.classList.add(`media-enter-${enterAnim}`);
-
         const onAnimationEnd = () => {
           video.classList.remove(`media-enter-${enterAnim}`);
           video.removeEventListener("animationend", onAnimationEnd);
@@ -333,11 +316,10 @@ function MediaEditor({
       } else if (img) {
         img.classList.remove(
           ...Array.from(img.classList).filter(
-            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-"),
-          ),
+            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-")
+          )
         );
         img.classList.add(`media-enter-${enterAnim}`);
-
         const onAnimationEnd = () => {
           img.classList.remove(`media-enter-${enterAnim}`);
           img.removeEventListener("animationend", onAnimationEnd);
@@ -361,29 +343,20 @@ function MediaEditor({
     const exitAnim = value.animation?.exit || "none";
 
     const finishStop = () => {
-      if (video) {
-        video.pause();
-        video.currentTime = 0;
-      }
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
+      if (video) { video.pause(); video.currentTime = 0; }
+      if (audio) { audio.pause(); audio.currentTime = 0; }
       setPreviewAnimation("idle");
     };
 
     if (exitAnim !== "none") {
       setPreviewAnimation("exiting");
-
-      // Применяем анимацию выхода
       if (video) {
         video.classList.remove(
           ...Array.from(video.classList).filter(
-            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-"),
-          ),
+            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-")
+          )
         );
         video.classList.add(`media-exit-${exitAnim}`);
-
         const onAnimationEnd = () => {
           video.classList.remove(`media-exit-${exitAnim}`);
           video.removeEventListener("animationend", onAnimationEnd);
@@ -393,11 +366,10 @@ function MediaEditor({
       } else if (img) {
         img.classList.remove(
           ...Array.from(img.classList).filter(
-            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-"),
-          ),
+            (c) => c.startsWith("media-enter-") || c.startsWith("media-exit-")
+          )
         );
         img.classList.add(`media-exit-${exitAnim}`);
-
         const onAnimationEnd = () => {
           img.classList.remove(`media-exit-${exitAnim}`);
           img.removeEventListener("animationend", onAnimationEnd);
@@ -424,19 +396,18 @@ function MediaEditor({
   };
 
   const filteredFiles = mediaFiles.filter((file) =>
-    file.name.toLowerCase().includes(fileSearchQuery.toLowerCase()),
+    file.name.toLowerCase().includes(fileSearchQuery.toLowerCase())
   );
 
   const fileType = getFileMediaType(selectedFile);
   const font = value.text?.font || {};
   const textAnimation = value.text?.animation || "none";
+  const volumePercent = value.volume || 100;
 
   const renderAnimatedTextPreview = (text, animation, animKey) => {
     if (!text) return "[текст]";
     if (!animation || animation === "none") return text;
-
     const animClass = `preview-char-${animation}`;
-
     return text.split("").map((char, i) => (
       <span
         key={`${animKey}-${i}`}
@@ -448,12 +419,47 @@ function MediaEditor({
     ));
   };
 
-  const volumePercent = value.volume || 100;
+  const textOverlayStyle = {
+    fontFamily: font.fontFamily || "'Segoe UI', sans-serif",
+    fontSize: `${Math.min(font.fontSize || 32, 32)}px`,
+    fontWeight: font.fontWeight || "700",
+    fontStyle: font.fontStyle || "normal",
+    color: font.color || "#ffffff",
+    textShadow: "0px 0px 1px #000, 0px 0px 2px #000, 0px 0px 3px #000",
+  };
+
+  const renderTextOverlay = () => {
+    if (!textEnabled) return null;
+    return (
+      <div
+        key={`text-wrapper-${textAnimKey}`}
+        className="preview-text-overlay"
+        style={textOverlayStyle}
+      >
+        {previewAnimation === "playing" || previewAnimation === "entering"
+          ? renderAnimatedTextPreview(value.text.content, textAnimation, textAnimKey)
+          : value.text.content || "[текст]"}
+      </div>
+    );
+  };
+
+  const renderPreviewControls = () => (
+    <div className="preview-controls">
+      {previewAnimation === "idle" || previewAnimation === "exiting" ? (
+        <button onClick={playPreview} className="preview-play-btn" disabled={previewAnimation === "exiting"}>
+          <FaPlay /> Воспроизвести
+        </button>
+      ) : (
+        <button onClick={stopPreview} className="preview-stop-btn" disabled={previewAnimation === "exiting"}>
+          <FaStop /> Остановить
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="media-editor">
-      {/* Error message */}
-      {errorMessage && <div className="error-message">⚠️ {errorMessage}</div>}
+      {errorMessage && <div className="error-message">{errorMessage}</div>}
 
       {/* File Selector */}
       <div className="media-file-selector">
@@ -462,32 +468,13 @@ function MediaEditor({
           <Tooltip text="Выберите видео, аудио или изображение. Поддерживаются: MP4, WebM, MP3, WAV, OGG, JPG, PNG, GIF, WebP." />
         </label>
         <div className="file-input-group">
-          <input
-            type="text"
-            value={selectedFile || "Файл не выбран"}
-            readOnly
-            placeholder="Файл не выбран"
-            className="file-name-display"
-          />
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            accept="video/*,audio/*,image/*"
-            style={{ display: "none" }}
-          />
+          <input type="text" value={selectedFile || "Файл не выбран"} readOnly placeholder="Файл не выбран" className="file-name-display" />
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="video/*,audio/*,image/*" style={{ display: "none" }} />
           <div className="file-button-group">
-            <button
-              onClick={() => fileInputRef.current.click()}
-              className="browse-btn"
-              disabled={uploading}
-            >
+            <button onClick={() => fileInputRef.current.click()} className="browse-btn" disabled={uploading}>
               <FaUpload /> {uploading ? `${uploadProgress}%` : "Загрузить"}
             </button>
-            <button
-              onClick={() => setShowFileBrowser(!showFileBrowser)}
-              className="browse-btn browse-existing"
-            >
+            <button onClick={() => setShowFileBrowser(!showFileBrowser)} className="browse-btn browse-existing">
               <FaFolderOpen /> Из папки
             </button>
           </div>
@@ -499,49 +486,24 @@ function MediaEditor({
               <h4>📁 Медиа-файлы</h4>
               <div className="file-search">
                 <FaSearch className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Поиск файлов..."
-                  value={fileSearchQuery}
-                  onChange={(e) => setFileSearchQuery(e.target.value)}
-                  className="file-search-input"
-                />
+                <input type="text" placeholder="Поиск файлов..." value={fileSearchQuery} onChange={(e) => setFileSearchQuery(e.target.value)} className="file-search-input" />
                 {fileSearchQuery && (
-                  <button
-                    className="search-clear-btn"
-                    onClick={() => setFileSearchQuery("")}
-                  >
-                    ✕
-                  </button>
+                  <button className="search-clear-btn" onClick={() => setFileSearchQuery("")}>✕</button>
                 )}
               </div>
             </div>
             {filteredFiles.length === 0 ? (
               <p className="empty-files">
-                {mediaFiles.length === 0
-                  ? "Нет файлов"
-                  : `Нет файлов, содержащих "${fileSearchQuery}"`}
+                {mediaFiles.length === 0 ? "Нет файлов" : `Нет файлов, содержащих "${fileSearchQuery}"`}
               </p>
             ) : (
               <div className="files-grid">
                 {filteredFiles.map((file) => (
-                  <div
-                    key={file.name}
-                    className={`file-item ${selectedFile === file.name ? "selected" : ""}`}
-                    onClick={() => selectExistingFile(file)}
-                  >
+                  <div key={file.name} className={`file-item ${selectedFile === file.name ? "selected" : ""}`} onClick={() => selectExistingFile(file)}>
                     <span className="file-icon">{getFileIcon(file)}</span>
-                    <span className="file-name" title={file.name}>
-                      {file.name}
-                    </span>
-                    <span className="file-size">
-                      {(file.size / 1024 / 1024).toFixed(1)} MB
-                    </span>
-                    <button
-                      className="delete-file-btn"
-                      onClick={(e) => deleteFile(file.name, e)}
-                      title="Удалить"
-                    >
+                    <span className="file-name" title={file.name}>{file.name}</span>
+                    <span className="file-size">{(file.size / 1024 / 1024).toFixed(1)} MB</span>
+                    <button className="delete-file-btn" onClick={(e) => deleteFile(file.name, e)} title="Удалить">
                       <FaTrash />
                     </button>
                   </div>
@@ -554,10 +516,7 @@ function MediaEditor({
         {uploading && (
           <div className="upload-progress">
             <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${uploadProgress}%` }}
-              />
+              <div className="progress-fill" style={{ width: `${uploadProgress}%` }} />
             </div>
             <span className="progress-text">{uploadProgress}%</span>
           </div>
@@ -574,35 +533,25 @@ function MediaEditor({
           value={value.overlay?.id || value.overlay || ""}
           onChange={(e) => {
             const sel = overlays.find((o) => o.id === e.target.value);
-            updateMedia({
-              overlay: sel ? { id: sel.id, path: sel.path } : null,
-            });
+            updateMedia({ overlay: sel ? { id: sel.id, path: sel.path } : null });
           }}
           className="overlay-select"
         >
           <option value="">📡 Все оверлеи</option>
           {overlays.map((o) => (
-            <option key={o.id} value={o.id}>
-              🖥️ {o.name} (/overlay/{o.path})
-            </option>
+            <option key={o.id} value={o.id}>🖥️ {o.name} (/overlay/{o.path})</option>
           ))}
         </select>
       </div>
 
-      {/* Volume Control (0-100%) */}
+      {/* Volume Control */}
       <div className="media-settings">
         <label>
           🔊 Громкость
           <Tooltip text="Громкость воспроизведения для видео и аудио (0-100%)" />
         </label>
         <div className="volume-control">
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volumePercent}
-            onChange={(e) => updateMedia({ volume: parseInt(e.target.value) })}
-          />
+          <input type="range" min="0" max="100" value={volumePercent} onChange={(e) => updateMedia({ volume: parseInt(e.target.value) })} />
           <span className="volume-value">{volumePercent}%</span>
           <FaVolumeUp className="volume-icon" />
         </div>
@@ -615,30 +564,14 @@ function MediaEditor({
           <div className="animation-row">
             <div className="animation-select-group">
               <label>Появление</label>
-              <select
-                value={value.animation?.enter || "none"}
-                onChange={(e) => updateAnimation({ enter: e.target.value })}
-                className="animation-select"
-              >
-                {MEDIA_ENTER_ANIMATIONS.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
+              <select value={value.animation?.enter || "none"} onChange={(e) => updateAnimation({ enter: e.target.value })} className="animation-select">
+                {MEDIA_ENTER_ANIMATIONS.map((a) => (<option key={a.value} value={a.value}>{a.label}</option>))}
               </select>
             </div>
             <div className="animation-select-group">
               <label>Скрытие</label>
-              <select
-                value={value.animation?.exit || "none"}
-                onChange={(e) => updateAnimation({ exit: e.target.value })}
-                className="animation-select"
-              >
-                {MEDIA_EXIT_ANIMATIONS.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
+              <select value={value.animation?.exit || "none"} onChange={(e) => updateAnimation({ exit: e.target.value })} className="animation-select">
+                {MEDIA_EXIT_ANIMATIONS.map((a) => (<option key={a.value} value={a.value}>{a.label}</option>))}
               </select>
             </div>
           </div>
@@ -649,12 +582,7 @@ function MediaEditor({
       <div className="media-text-section">
         <div className="section-header">
           <label className="toggle-label">
-            <input
-              type="checkbox"
-              checked={textEnabled}
-              onChange={(e) => toggleText(e.target.checked)}
-              className="toggle-checkbox"
-            />
+            <input type="checkbox" checked={textEnabled} onChange={(e) => toggleText(e.target.checked)} className="toggle-checkbox" />
             <span className="toggle-text">📝 Показывать текст на оверлее</span>
             <Tooltip text="Добавить текст поверх медиа или рядом с ним. Можно использовать переменную {user}." />
           </label>
@@ -663,9 +591,7 @@ function MediaEditor({
         {textEnabled && (
           <div className="text-settings">
             <div className="text-vars-block">
-              <div className="text-vars-label">
-                <span>📌 Доступные переменные:</span>
-              </div>
+              <div className="text-vars-label"><span>📌 Доступные переменные:</span></div>
               <div className="text-vars-badges">
                 <code className="text-var-badge">{"{user}"}</code>
                 <span className="text-var-note">— имя пользователя</span>
@@ -674,25 +600,14 @@ function MediaEditor({
 
             <div className="text-input-group">
               <label>Текст</label>
-              <textarea
-                value={value.text?.content || ""}
-                onChange={(e) => updateText({ content: e.target.value })}
-                placeholder="Текст для отображения... Используйте {user} для имени пользователя"
-                rows="3"
-                className="text-content-input"
-              />
+              <textarea value={value.text?.content || ""} onChange={(e) => updateText({ content: e.target.value })} placeholder="Текст для отображения... Используйте {user} для имени пользователя" rows="3" className="text-content-input" />
             </div>
 
             <div className="position-selector">
               <label>Позиция текста</label>
               <div className="position-buttons">
                 {["above", "below", "left", "right", "overlay"].map((pos) => (
-                  <button
-                    key={pos}
-                    type="button"
-                    className={`position-btn ${value.text?.position === pos ? "active" : ""}`}
-                    onClick={() => updateText({ position: pos })}
-                  >
+                  <button key={pos} type="button" className={`position-btn ${value.text?.position === pos ? "active" : ""}`} onClick={() => updateText({ position: pos })}>
                     {pos === "above" && "⬆️ Сверху"}
                     {pos === "below" && "⬇️ Снизу"}
                     {pos === "left" && "⬅️ Слева"}
@@ -705,41 +620,23 @@ function MediaEditor({
 
             <div className="text-animation-selector">
               <label>🎭 Анимация текста</label>
-              <select
-                value={textAnimation}
-                onChange={(e) => updateText({ animation: e.target.value })}
-                className="animation-select"
-              >
-                {TEXT_ANIMATIONS.map((a) => (
-                  <option key={a.value} value={a.value}>
-                    {a.label}
-                  </option>
-                ))}
+              <select value={textAnimation} onChange={(e) => updateText({ animation: e.target.value })} className="animation-select">
+                {TEXT_ANIMATIONS.map((a) => (<option key={a.value} value={a.value}>{a.label}</option>))}
               </select>
             </div>
 
-            {/* Font Settings */}
             <div className="font-settings">
               <h4>🔤 Настройки шрифта</h4>
               <div className="font-settings-grid">
                 <div className="font-setting-item">
                   <label>Режим выбора шрифта</label>
                   <div className="font-mode-buttons">
-                    <button
-                      type="button"
-                      className={`font-mode-btn ${fontSelectionMode === "preset" ? "active" : ""}`}
-                      onClick={() => {
-                        setFontSelectionMode("preset");
-                        updateFont({ fontFamily: "'Segoe UI', sans-serif" });
-                      }}
-                    >
+                    <button type="button" className={`font-mode-btn ${fontSelectionMode === "preset" ? "active" : ""}`}
+                      onClick={() => { setFontSelectionMode("preset"); updateFont({ fontFamily: "'Segoe UI', sans-serif" }); }}>
                       📋 Из списка
                     </button>
-                    <button
-                      type="button"
-                      className={`font-mode-btn ${fontSelectionMode === "custom" ? "active" : ""}`}
-                      onClick={() => setFontSelectionMode("custom")}
-                    >
+                    <button type="button" className={`font-mode-btn ${fontSelectionMode === "custom" ? "active" : ""}`}
+                      onClick={() => setFontSelectionMode("custom")}>
                       ✏️ Свой шрифт
                     </button>
                   </div>
@@ -748,70 +645,27 @@ function MediaEditor({
                 {fontSelectionMode === "preset" ? (
                   <div className="font-setting-item">
                     <label>Семейство</label>
-                    <select
-                      value={font.fontFamily || "'Segoe UI', sans-serif"}
-                      onChange={(e) =>
-                        updateFont({ fontFamily: e.target.value })
-                      }
-                      className="font-select"
-                    >
-                      {FONT_FAMILIES.map((f) => (
-                        <option key={f.value} value={f.value}>
-                          {f.label}
-                        </option>
-                      ))}
+                    <select value={font.fontFamily || "'Segoe UI', sans-serif"} onChange={(e) => updateFont({ fontFamily: e.target.value })} className="font-select">
+                      {FONT_FAMILIES.map((f) => (<option key={f.value} value={f.value}>{f.label}</option>))}
                     </select>
                   </div>
                 ) : (
                   <div className="font-setting-item">
                     <label>Название шрифта</label>
-                    <input
-                      type="text"
-                      value={
-                        font.fontFamily
-                          ?.replace(/'/g, "")
-                          .replace(", sans-serif", "") || ""
-                      }
-                      onChange={(e) =>
-                        updateFont({
-                          fontFamily: `'${e.target.value}', sans-serif`,
-                        })
-                      }
-                      placeholder="например: Roboto, Montserrat"
-                      className="custom-font-input"
-                    />
+                    <input type="text" value={font.fontFamily?.replace(/'/g, "").replace(", sans-serif", "") || ""} onChange={(e) => updateFont({ fontFamily: `'${e.target.value}', sans-serif` })} placeholder="например: Roboto, Montserrat" className="custom-font-input" />
                   </div>
                 )}
 
                 <div className="font-setting-item">
                   <label>Размер: {font.fontSize || 32}px</label>
-                  <input
-                    type="range"
-                    min="12"
-                    max="120"
-                    value={font.fontSize || 32}
-                    onChange={(e) =>
-                      updateFont({ fontSize: parseInt(e.target.value) })
-                    }
-                  />
+                  <input type="range" min="12" max="120" value={font.fontSize || 32} onChange={(e) => updateFont({ fontSize: parseInt(e.target.value) })} />
                 </div>
 
                 <div className="font-setting-item">
                   <label>Цвет текста</label>
                   <div className="color-input-group">
-                    <input
-                      type="color"
-                      value={font.color || "#ffffff"}
-                      onChange={(e) => updateFont({ color: e.target.value })}
-                      className="color-picker"
-                    />
-                    <input
-                      type="text"
-                      value={font.color || "#ffffff"}
-                      onChange={(e) => updateFont({ color: e.target.value })}
-                      className="color-text-input"
-                      placeholder="#ffffff"
-                    />
+                    <input type="color" value={font.color || "#ffffff"} onChange={(e) => updateFont({ color: e.target.value })} className="color-picker" />
+                    <input type="text" value={font.color || "#ffffff"} onChange={(e) => updateFont({ color: e.target.value })} className="color-text-input" placeholder="#ffffff" />
                   </div>
                 </div>
               </div>
@@ -825,10 +679,7 @@ function MediaEditor({
         <div className="media-preview-section">
           <div className="preview-header">
             <h4>👁️ Предпросмотр</h4>
-            <button
-              onClick={togglePreview}
-              className={`preview-toggle-btn ${showPreview ? "active" : ""}`}
-            >
+            <button onClick={togglePreview} className={`preview-toggle-btn ${showPreview ? "active" : ""}`}>
               {showPreview ? "Скрыть" : "Показать"}
             </button>
           </div>
@@ -836,175 +687,23 @@ function MediaEditor({
             <div className="preview-container">
               {fileType === "video" && (
                 <div className="preview-video-wrap">
-                  <video
-                    ref={previewVideoRef}
-                    src={`http://127.0.0.1:3001/media/${selectedFile}`}
-                    className="preview-video"
-                    onEnded={handleVideoEnded}
-                    playsInline
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "300px",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  {textEnabled && (
-                    <div
-                      key={`text-wrapper-${textAnimKey}`}
-                      className="preview-text-overlay"
-                      style={{
-                        fontFamily: font.fontFamily || "'Segoe UI', sans-serif",
-                        fontSize: `${Math.min(font.fontSize || 32, 32)}px`,
-                        fontWeight: font.fontWeight || "700",
-                        fontStyle: font.fontStyle || "normal",
-                        color: font.color || "#ffffff",
-                        textShadow:
-                          "0px 0px 1px #000, 0px 0px 2px #000, 0px 0px 3px #000",
-                      }}
-                    >
-                      {previewAnimation === "playing" ||
-                      previewAnimation === "entering"
-                        ? renderAnimatedTextPreview(
-                            value.text.content,
-                            textAnimation,
-                            textAnimKey,
-                          )
-                        : value.text.content || "[текст]"}
-                    </div>
-                  )}
-                  <div className="preview-controls">
-                    {previewAnimation === "idle" ||
-                    previewAnimation === "exiting" ? (
-                      <button
-                        onClick={playPreview}
-                        className="preview-play-btn"
-                        disabled={previewAnimation === "exiting"}
-                      >
-                        <FaPlay /> Воспроизвести
-                      </button>
-                    ) : (
-                      <button
-                        onClick={stopPreview}
-                        className="preview-stop-btn"
-                        disabled={previewAnimation === "exiting"}
-                      >
-                        <FaStop /> Остановить
-                      </button>
-                    )}
-                  </div>
+                  <video ref={previewVideoRef} src={`http://127.0.0.1:3001/media/${selectedFile}`} className="preview-video" onEnded={handleVideoEnded} playsInline style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: "8px" }} />
+                  {renderTextOverlay()}
+                  {renderPreviewControls()}
                 </div>
               )}
               {fileType === "image" && (
                 <div className="preview-image-wrap">
-                  <img
-                    key={`image-${mediaAnimKey}`}
-                    src={`http://127.0.0.1:3001/media/${selectedFile}`}
-                    alt="preview"
-                    className="preview-image"
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "300px",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  {textEnabled && (
-                    <div
-                      key={`text-wrapper-${textAnimKey}`}
-                      className="preview-text-overlay"
-                      style={{
-                        fontFamily: font.fontFamily || "'Segoe UI', sans-serif",
-                        fontSize: `${Math.min(font.fontSize || 32, 32)}px`,
-                        fontWeight: font.fontWeight || "700",
-                        fontStyle: font.fontStyle || "normal",
-                        color: font.color || "#ffffff",
-                        textShadow:
-                          "0px 0px 1px #000, 0px 0px 2px #000, 0px 0px 3px #000",
-                        marginTop: "10px",
-                      }}
-                    >
-                      {previewAnimation === "playing" ||
-                      previewAnimation === "entering"
-                        ? renderAnimatedTextPreview(
-                            value.text.content,
-                            textAnimation,
-                            textAnimKey,
-                          )
-                        : value.text.content || "[текст]"}
-                    </div>
-                  )}
-                  <div className="preview-controls">
-                    {previewAnimation === "idle" ||
-                    previewAnimation === "exiting" ? (
-                      <button
-                        onClick={playPreview}
-                        className="preview-play-btn"
-                        disabled={previewAnimation === "exiting"}
-                      >
-                        <FaPlay /> Воспроизвести
-                      </button>
-                    ) : (
-                      <button
-                        onClick={stopPreview}
-                        className="preview-stop-btn"
-                      >
-                        <FaStop /> Остановить
-                      </button>
-                    )}
-                  </div>
+                  <img key={`image-${mediaAnimKey}`} src={`http://127.0.0.1:3001/media/${selectedFile}`} alt="preview" className="preview-image" style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: "8px" }} />
+                  {renderTextOverlay()}
+                  {renderPreviewControls()}
                 </div>
               )}
               {fileType === "audio" && (
                 <div className="preview-audio-wrap">
-                  <audio
-                    ref={previewAudioRef}
-                    src={`http://127.0.0.1:3001/media/${selectedFile}`}
-                    style={{ width: "100%" }}
-                    onEnded={handleVideoEnded}
-                  />
-                  {textEnabled && (
-                    <div
-                      key={`text-wrapper-${textAnimKey}`}
-                      className="preview-text-overlay"
-                      style={{
-                        fontFamily: font.fontFamily || "'Segoe UI', sans-serif",
-                        fontSize: `${Math.min(font.fontSize || 32, 32)}px`,
-                        fontWeight: font.fontWeight || "700",
-                        fontStyle: font.fontStyle || "normal",
-                        color: font.color || "#ffffff",
-                        textShadow:
-                          "0px 0px 1px #000, 0px 0px 2px #000, 0px 0px 3px #000",
-                        marginTop: "10px",
-                      }}
-                    >
-                      {previewAnimation === "playing" ||
-                      previewAnimation === "entering"
-                        ? renderAnimatedTextPreview(
-                            value.text.content,
-                            textAnimation,
-                            textAnimKey,
-                          )
-                        : value.text.content || "[текст]"}
-                    </div>
-                  )}
-                  <div className="preview-controls">
-                    {previewAnimation === "idle" ||
-                    previewAnimation === "exiting" ? (
-                      <button
-                        onClick={playPreview}
-                        className="preview-play-btn"
-                        disabled={previewAnimation === "exiting"}
-                      >
-                        <FaPlay /> Воспроизвести
-                      </button>
-                    ) : (
-                      <button
-                        onClick={stopPreview}
-                        className="preview-stop-btn"
-                      >
-                        <FaStop /> Остановить
-                      </button>
-                    )}
-                  </div>
+                  <audio ref={previewAudioRef} src={`http://127.0.0.1:3001/media/${selectedFile}`} style={{ width: "100%" }} onEnded={handleVideoEnded} />
+                  {renderTextOverlay()}
+                  {renderPreviewControls()}
                 </div>
               )}
             </div>

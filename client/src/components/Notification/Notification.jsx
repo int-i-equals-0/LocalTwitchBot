@@ -3,7 +3,6 @@ import React, { useState, useEffect, createContext, useContext, useCallback } fr
 import { FaCheck, FaExclamationTriangle, FaInfo, FaTimes, FaQuestionCircle } from 'react-icons/fa';
 import './Notification.css';
 
-// Типы уведомлений
 export const NOTIFICATION_TYPES = {
   SUCCESS: 'success',
   ERROR: 'error',
@@ -12,7 +11,6 @@ export const NOTIFICATION_TYPES = {
   CONFIRM: 'confirm'
 };
 
-// Компонент отдельного уведомления
 function NotificationItem({ type, message, duration, onClose }) {
   const [visible, setVisible] = useState(true);
   const [progress, setProgress] = useState(100);
@@ -22,7 +20,7 @@ function NotificationItem({ type, message, duration, onClose }) {
       const interval = 50;
       const steps = duration / interval;
       const decrement = 100 / steps;
-      
+
       const timer = setInterval(() => {
         setProgress(prev => {
           if (prev <= 0) {
@@ -49,32 +47,20 @@ function NotificationItem({ type, message, duration, onClose }) {
 
   const getIcon = () => {
     switch (type) {
-      case NOTIFICATION_TYPES.SUCCESS:
-        return <FaCheck />;
-      case NOTIFICATION_TYPES.ERROR:
-        return <FaTimes />;
-      case NOTIFICATION_TYPES.WARNING:
-        return <FaExclamationTriangle />;
-      case NOTIFICATION_TYPES.CONFIRM:
-        return <FaQuestionCircle />;
-      default:
-        return <FaInfo />;
+      case NOTIFICATION_TYPES.SUCCESS: return <FaCheck />;
+      case NOTIFICATION_TYPES.ERROR: return <FaTimes />;
+      case NOTIFICATION_TYPES.WARNING: return <FaExclamationTriangle />;
+      case NOTIFICATION_TYPES.CONFIRM: return <FaQuestionCircle />;
+      default: return <FaInfo />;
     }
   };
 
   return (
-    <div className={`notification ${type}`} onClick={() => {
-      setVisible(false);
-      onClose?.();
-    }}>
+    <div className={`notification ${type}`} onClick={() => { setVisible(false); onClose?.(); }}>
       <div className="notification-content">
         <div className="notification-icon">{getIcon()}</div>
         <span className="notification-message">{message}</span>
-        <button className="notification-close" onClick={(e) => {
-          e.stopPropagation();
-          setVisible(false);
-          onClose?.();
-        }}>
+        <button className="notification-close" onClick={(e) => { e.stopPropagation(); setVisible(false); onClose?.(); }}>
           <FaTimes />
         </button>
       </div>
@@ -87,35 +73,29 @@ function NotificationItem({ type, message, duration, onClose }) {
   );
 }
 
-// Компонент модального подтверждения
 function ConfirmModal({ message, onConfirm, onCancel }) {
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <FaExclamationTriangle className="modal-icon warning" />
+    <div className="confirm-overlay" onClick={onCancel}>
+      <div className="confirm-dialog" onClick={e => e.stopPropagation()}>
+        <div className="confirm-header">
+          <FaExclamationTriangle className="confirm-icon warning" />
           <h3>Подтверждение</h3>
-          <button className="modal-close" onClick={onCancel}>
+          <button className="confirm-close-btn" onClick={onCancel}>
             <FaTimes />
           </button>
         </div>
-        <div className="modal-body">
+        <div className="confirm-body">
           <p>{message}</p>
         </div>
-        <div className="modal-footer">
-          <button className="modal-btn cancel" onClick={onCancel}>
-            Отмена
-          </button>
-          <button className="modal-btn confirm" onClick={onConfirm}>
-            Подтвердить
-          </button>
+        <div className="confirm-footer">
+          <button className="confirm-btn cancel" onClick={onCancel}>Отмена</button>
+          <button className="confirm-btn confirm" onClick={onConfirm}>Подтвердить</button>
         </div>
       </div>
     </div>
   );
 }
 
-// Контекст для управления уведомлениями
 const NotificationContext = createContext(null);
 
 export const useNotification = () => {
@@ -133,13 +113,13 @@ export const NotificationProvider = ({ children }) => {
   const showNotification = useCallback((message, type = NOTIFICATION_TYPES.INFO, duration = 3000) => {
     const id = Date.now() + Math.random();
     setNotifications(prev => [...prev, { id, message, type, duration }]);
-    
+
     if (type !== NOTIFICATION_TYPES.CONFIRM) {
       setTimeout(() => {
         setNotifications(prev => prev.filter(n => n.id !== id));
       }, duration);
     }
-    
+
     return id;
   }, []);
 
@@ -151,32 +131,20 @@ export const NotificationProvider = ({ children }) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
-  const closeConfirm = useCallback(() => {
-    setConfirmModal(null);
-  }, []);
-
   const handleConfirm = useCallback(() => {
-    if (confirmModal?.onConfirm) {
-      confirmModal.onConfirm();
-    }
+    if (confirmModal?.onConfirm) confirmModal.onConfirm();
     setConfirmModal(null);
   }, [confirmModal]);
 
   const handleCancel = useCallback(() => {
-    if (confirmModal?.onCancel) {
-      confirmModal.onCancel();
-    }
+    if (confirmModal?.onCancel) confirmModal.onCancel();
     setConfirmModal(null);
   }, [confirmModal]);
 
   return (
-    <NotificationContext.Provider value={{ 
-      showNotification, 
-      showConfirm, 
-      closeNotification
-    }}>
+    <NotificationContext.Provider value={{ showNotification, showConfirm, closeNotification }}>
       {children}
-      
+
       <div className="notifications-container">
         {notifications.map(({ id, message, type, duration }) => (
           <NotificationItem

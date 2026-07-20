@@ -1,39 +1,42 @@
 // client/src/components/Common/AliasEditor.jsx
 import { useState } from 'react';
 import { FaPlus, FaTrash } from 'react-icons/fa';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
 import './ResponseEditor.css';
 
 function AliasEditor({ value = [], onChange, allCommands = {}, currentCommandName }) {
+  const { showNotification } = useNotification();
   const [newAlias, setNewAlias] = useState('');
 
   const addAlias = () => {
     const trimmed = newAlias.trim();
     if (!trimmed) return;
-    
+
     const alias = trimmed.startsWith('!') ? trimmed : `!${trimmed}`;
-    const aliasWithoutBang = alias.slice(1);
-    
+
     if (value.includes(alias)) {
-      alert('Такой алиас уже существует');
+      showNotification('⚠️ Такой алиас уже существует', NOTIFICATION_TYPES.WARNING, 2000);
       return;
     }
-    
+
     if (alias === `!${currentCommandName}`) {
-      alert('Нельзя создать алиас, ссылающийся на самого себя');
+      showNotification('⚠️ Нельзя создать алиас, ссылающийся на самого себя', NOTIFICATION_TYPES.WARNING, 2000);
       return;
     }
-    
+
     if (allCommands[alias]) {
-      alert(`Команда ${alias} уже существует. Алиас не может совпадать с существующей командой.`);
+      showNotification(`❌ Команда ${alias} уже существует. Алиас не может совпадать с существующей командой.`, NOTIFICATION_TYPES.ERROR, 3000);
       return;
     }
-    
+
     onChange([...value, alias]);
     setNewAlias('');
+    showNotification(`✅ Алиас ${alias} добавлен`, NOTIFICATION_TYPES.SUCCESS, 1500);
   };
 
   const removeAlias = (alias) => {
     onChange(value.filter(a => a !== alias));
+    showNotification(`🗑️ Алиас ${alias} удалён`, NOTIFICATION_TYPES.WARNING, 1500);
   };
 
   return (
@@ -70,7 +73,7 @@ function AliasEditor({ value = [], onChange, allCommands = {}, currentCommandNam
           value={newAlias}
           onChange={(e) => setNewAlias(e.target.value.replace(/^!+/, ''))}
           placeholder="Название алиаса (без !)"
-          onKeyPress={(e) => e.key === 'Enter' && addAlias()}
+          onKeyDown={(e) => e.key === 'Enter' && addAlias()}
           className="alias-input"
         />
         <button onClick={addAlias} className="add-alias-btn">

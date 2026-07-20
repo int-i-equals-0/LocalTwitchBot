@@ -1,153 +1,13 @@
 /* client/src/components/Events/EventsTab.css */
-.events-header {
-  margin-bottom: 24px;
-}
-
-.events-header h2 {
-  color: var(--accent);
-  margin-bottom: 8px;
-}
 
 .events-description {
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
-.events-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
-}
-
-.event-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  overflow: hidden;
-  transition: var(--transition);
-}
-
-.event-card:hover {
-  border-color: var(--accent);
-}
-
-.event-card.disabled {
-  opacity: 0.6;
-}
-
-.event-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: var(--bg-tertiary);
-}
-
-.event-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
 .event-name {
   font-size: 16px;
   font-weight: bold;
   color: var(--text-primary);
-}
-
-.event-status-badge {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.event-status-badge.enabled {
-  background: var(--success-light);
-  color: var(--success);
-  border: 1px solid var(--success);
-}
-
-.event-status-badge.disabled {
-  background: var(--danger-light);
-  color: var(--danger);
-  border: 1px solid var(--danger);
-}
-
-.event-type-badge {
-  background: var(--bg-input);
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.event-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.test-btn {
-  background: var(--info);
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.test-btn:hover {
-  background: var(--info-hover);
-}
-
-.status-toggle-btn {
-  background: var(--bg-input);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: 6px;
-  border-radius: 20px;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.status-toggle-btn.on {
-  color: var(--success);
-  border-color: var(--success);
-}
-
-.status-toggle-btn.off {
-  color: var(--danger);
-  border-color: var(--danger);
-}
-
-.edit-btn {
-  background: var(--info);
-  color: white;
-  border: none;
-  padding: 6px;
-  border-radius: 20px;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.edit-btn:hover {
-  background: var(--info-hover);
 }
 
 /* Event Editor */
@@ -194,49 +54,7 @@
   border: 1px solid var(--accent);
 }
 
-.event-editor-actions {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.save-event-btn {
-  background: var(--success);
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: var(--border-radius-sm);
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.save-event-btn:hover {
-  background: var(--success-hover);
-}
-
-.overlay-badge {
-  background: var(--info-light);
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  color: var(--info);
-  border: 1px solid var(--info);
-}
-
 @media (max-width: 768px) {
-  .event-title {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .event-actions {
-    flex-wrap: wrap;
-  }
-  
   .event-vars {
     flex-direction: column;
     align-items: flex-start;

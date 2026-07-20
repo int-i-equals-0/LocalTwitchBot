@@ -30,41 +30,21 @@ function PermissionsSelector({ value = [], onChange }) {
         🔒 Разрешено для
         <Tooltip text="Кто может использовать эту команду. Если не выбрано ничего — доступно всем." />
       </label>
-      
+
       <div className="role-buttons">
-        <button
-          type="button"
-          className={`role-btn ${value.includes('broadcaster') ? 'active' : ''}`}
-          onClick={() => toggleRole('broadcaster')}
-        >
+        <button type="button" className={`role-btn ${value.includes('broadcaster') ? 'active' : ''}`} onClick={() => toggleRole('broadcaster')}>
           👑 Стример
         </button>
-        <button
-          type="button"
-          className={`role-btn ${value.includes('moderators') ? 'active' : ''}`}
-          onClick={() => toggleRole('moderators')}
-        >
+        <button type="button" className={`role-btn ${value.includes('moderators') ? 'active' : ''}`} onClick={() => toggleRole('moderators')}>
           🛡️ Модераторы
         </button>
-        <button
-          type="button"
-          className={`role-btn ${value.includes('vips') ? 'active' : ''}`}
-          onClick={() => toggleRole('vips')}
-        >
+        <button type="button" className={`role-btn ${value.includes('vips') ? 'active' : ''}`} onClick={() => toggleRole('vips')}>
           ⭐ VIP
         </button>
-        <button
-          type="button"
-          className={`role-btn ${value.includes('subscribers') ? 'active' : ''}`}
-          onClick={() => toggleRole('subscribers')}
-        >
+        <button type="button" className={`role-btn ${value.includes('subscribers') ? 'active' : ''}`} onClick={() => toggleRole('subscribers')}>
           📺 Подписчики
         </button>
-        <button
-          type="button"
-          className={`role-btn ${value.includes('everyone') ? 'active' : ''}`}
-          onClick={() => toggleRole('everyone')}
-        >
+        <button type="button" className={`role-btn ${value.includes('everyone') ? 'active' : ''}`} onClick={() => toggleRole('everyone')}>
           🌍 Все
         </button>
       </div>
@@ -88,7 +68,7 @@ function PermissionsSelector({ value = [], onChange }) {
             value={newUser}
             onChange={(e) => setNewUser(e.target.value)}
             placeholder="Имя пользователя"
-            onKeyPress={(e) => e.key === 'Enter' && addUser()}
+            onKeyDown={(e) => e.key === 'Enter' && addUser()}
           />
           <button onClick={addUser} className="add-user-btn">➕ Добавить</button>
         </div>
