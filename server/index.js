@@ -28,63 +28,6 @@ const VIEWERS_CACHE_TTL = 60000;
 const MAX_RECENT = 200;
 const SERVER_START_TIME = Date.now();
 
-// ========== ЛОГИРОВАНИЕ В ФАЙЛЫ ==========
-const LOGS_DIR = path.join(__dirname, "logs");
-if (!fs.existsSync(LOGS_DIR)) fs.mkdirSync(LOGS_DIR, { recursive: true });
-
-function getLogFileName() {
-  const now = new Date();
-  const dateStr = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
-
-  // Ищем следующий свободный номер для этой даты
-  let num = 1;
-  while (true) {
-    const name = `${dateStr}_log${String(num).padStart(3, "0")}.txt`;
-    const fullPath = path.join(LOGS_DIR, name);
-    if (!fs.existsSync(fullPath)) return fullPath;
-    num++;
-  }
-}
-
-const LOG_FILE_PATH = getLogFileName();
-const logFileStream = fs.createWriteStream(LOG_FILE_PATH, { flags: "a", encoding: "utf8" });
-
-logFileStream.on("error", (err) => {
-  process.stderr.write(`[LOG FILE ERROR] ${err.message}\n`);
-});
-
-function writeToLogFile(level, message) {
-  const now = new Date();
-  const timestamp = [
-    now.getFullYear(),
-    "-",
-    String(now.getMonth() + 1).padStart(2, "0"),
-    "-",
-    String(now.getDate()).padStart(2, "0"),
-    " ",
-    String(now.getHours()).padStart(2, "0"),
-    ":",
-    String(now.getMinutes()).padStart(2, "0"),
-    ":",
-    String(now.getSeconds()).padStart(2, "0"),
-    ".",
-    String(now.getMilliseconds()).padStart(3, "0"),
-  ].join("");
-
-  logFileStream.write(`[${timestamp}] [${level}] ${message}\n`);
-}
-
-// Записываем заголовок лог-файла
-logFileStream.write(`${"=".repeat(60)}\n`);
-logFileStream.write(`  Лог-файл сервера\n`);
-logFileStream.write(`  Запуск: ${new Date().toISOString()}\n`);
-logFileStream.write(`  Файл: ${path.basename(LOG_FILE_PATH)}\n`);
-logFileStream.write(`${"=".repeat(60)}\n\n`);
-
 // ========== НАСТРОЙКИ EVENTSUB ==========
 const EVENTSUB_SETTINGS = {
   KEEPALIVE_TIMEOUT: 45, // 45 секунд (вместо 10)
@@ -206,31 +149,25 @@ function sendLogToClients(msg) {
 const origLog = console.log,
   origErr = console.error,
   origWarn = console.warn;
-
 console.log = function (...a) {
   const m = a
     .map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x)))
     .join(" ");
   sendLogToClients(m);
-  writeToLogFile("LOG", m);
   origLog.apply(console, a);
 };
-
 console.error = function (...a) {
   const m = a
     .map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x)))
     .join(" ");
   sendLogToClients(m);
-  writeToLogFile("ERROR", m);
   origErr.apply(console, a);
 };
-
 console.warn = function (...a) {
   const m = a
     .map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x)))
     .join(" ");
   sendLogToClients(m);
-  writeToLogFile("WARN", m);
   origWarn.apply(console, a);
 };
 
@@ -1154,8 +1091,7 @@ async function executeAction(
     const mediaData = {
       videoFile: media.file,
       volume: media.volume || 100,
-      animation: media.animation || { enter: 'none', exit: 'none' },
-      queueMode: media.queueMode || 'queue',
+      animation: media.animation || { enter: "none", exit: "none" },
     };
 
     if (media.text?.enabled) {
@@ -2496,96 +2432,6 @@ app.delete("/api/media-files/:filename", async (req, res) => {
   }
 });
 
-app.get("/api/media-files/:filename/probe", async (req, res) => {
-  try {
-    const filename = req.params.filename;
-    const filePath = path.join(mediaDir, filename);
-
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ success: false, error: "Файл не найден" });
-    }
-
-    const stat = await fsPromises.stat(filePath);
-    const ext = path.extname(filename).toLowerCase().slice(1);
-    const warnings = [];
-    let detectedCodec = null;
-    let mediaType = "unknown";
-
-    if (["mp4", "webm", "mov", "avi", "mkv", "flv", "m4v"].includes(ext)) mediaType = "video";
-    else if (["mp3", "wav", "ogg", "m4a", "flac", "aac"].includes(ext)) mediaType = "audio";
-    else if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext)) mediaType = "image";
-
-    // Для видеофайлов — пытаемся определить кодек по заголовку
-    if (mediaType === "video") {
-      try {
-        const fd = await fsPromises.open(filePath, "r");
-        const headerSize = Math.min(stat.size, 16384);
-        const buffer = Buffer.alloc(headerSize);
-        await fd.read(buffer, 0, headerSize, 0);
-        await fd.close();
-
-        const headerAscii = buffer.toString("ascii");
-
-        if (headerAscii.includes("hvc1") || headerAscii.includes("hev1")) {
-          detectedCodec = "H.265/HEVC";
-          warnings.push(
-            "Видео использует кодек H.265/HEVC. Большинство браузеров не поддерживают этот кодек. Рекомендуется перекодировать в H.264 (MP4)."
-          );
-        } else if (headerAscii.includes("avc1") || headerAscii.includes("avc3")) {
-          detectedCodec = "H.264/AVC";
-        } else if (headerAscii.includes("vp08")) {
-          detectedCodec = "VP8";
-        } else if (headerAscii.includes("vp09")) {
-          detectedCodec = "VP9";
-        } else if (headerAscii.includes("av01")) {
-          detectedCodec = "AV1";
-          warnings.push(
-            "Видео использует кодек AV1. Поддержка может быть ограничена в старых браузерах."
-          );
-        }
-      } catch (e) {
-        // Не удалось прочитать заголовок — не критично
-      }
-
-      if (ext === "mkv") {
-        warnings.push("Формат MKV имеет ограниченную поддержку в браузерах. Рекомендуется MP4 или WebM.");
-      }
-      if (ext === "avi") {
-        warnings.push("Формат AVI не поддерживается браузерами. Необходимо конвертировать в MP4 или WebM.");
-      }
-      if (ext === "flv") {
-        warnings.push("Формат FLV не поддерживается браузерами. Необходимо конвертировать в MP4 или WebM.");
-      }
-      if (ext === "mov") {
-        warnings.push("Формат MOV может не поддерживаться во всех браузерах. Рекомендуется MP4.");
-      }
-    }
-
-    if (mediaType === "audio") {
-      if (ext === "flac") {
-        warnings.push("Формат FLAC может не поддерживаться во всех браузерах. Рекомендуется MP3 или OGG.");
-      }
-      if (ext === "aac") {
-        warnings.push("Формат AAC может требовать контейнер M4A для воспроизведения в браузере.");
-      }
-    }
-
-    res.json({
-      success: true,
-      file: filename,
-      size: stat.size,
-      sizeFormatted: (stat.size / 1024 / 1024).toFixed(2) + " MB",
-      mediaType,
-      extension: ext,
-      codec: detectedCodec,
-      warnings,
-      supported: warnings.length === 0,
-    });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
 app.post("/api/banwords/generate-aliases", (req, res) => {
   if (!req.body.word) return res.status(400).json({ error: "Нет слова" });
   const a = generateAliases(req.body.word);
@@ -2823,7 +2669,6 @@ app.post("/api/shutdown", (req, res) => {
       clearTimeout(broadcasterTokenRefreshTimer);
     stopAllTimers();
     disconnectEventSub();
-    logFileStream.end();
     process.exit(0);
   }, 500);
 });

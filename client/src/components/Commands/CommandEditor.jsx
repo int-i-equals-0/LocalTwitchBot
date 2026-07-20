@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FaSave, FaPlus } from 'react-icons/fa';
 import PermissionsSelector from './PermissionsSelector';
 import ResponseEditor from '../Common/ResponseEditor';
+import AliasEditor from '../Common/AliasEditor';
 import './CommandEditor.css';
 
 function CommandEditor({ commandKey, config, onUpdate, overlays = [], allCommands = {}, isNew = false }) {

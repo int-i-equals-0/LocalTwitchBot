@@ -1,4 +1,17 @@
 /* client/src/components/BanWords/BanWordsTab.css */
+.banwords-header {
+  margin-bottom: 24px;
+}
+
+.banwords-header h2 {
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.banwords-description {
+  color: var(--text-muted);
+  font-size: 14px;
+}
 
 .info-stats {
   display: flex;
@@ -71,6 +84,56 @@
   border: 1px solid var(--accent);
 }
 
+.words-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.empty-words {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+}
+
+.empty-words .hint {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.word-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.word-card:hover {
+  border-color: var(--accent);
+}
+
+.word-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: var(--bg-tertiary);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.word-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .word-text {
   font-size: 16px;
   font-weight: bold;
@@ -103,6 +166,12 @@
   background: var(--bg-input);
   padding: 4px 10px;
   border-radius: 20px;
+}
+
+.word-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .show-aliases-btn {
@@ -178,18 +247,17 @@
   background: var(--danger-hover);
 }
 
-/* Aliases expansion panel (unique to BanWords) */
-.banwords-tab .aliases-list {
+.aliases-list {
   padding: 16px 20px;
   background: var(--bg-tertiary);
   border-top: 1px solid var(--border-color);
 }
 
-.banwords-tab .aliases-header {
+.aliases-header {
   margin-bottom: 12px;
 }
 
-.banwords-tab .aliases-header strong {
+.aliases-header strong {
   color: var(--text-secondary);
   font-size: 13px;
 }
@@ -202,7 +270,7 @@
   overflow-y: auto;
 }
 
-.banwords-tab .alias-item {
+.alias-item {
   background: var(--bg-input);
   padding: 4px 12px;
   border-radius: 20px;
@@ -225,18 +293,28 @@
   font-size: 18px;
 }
 
-.add-word-form .form-row {
+.form-row {
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
 }
 
-.add-word-form .form-row input {
+.form-row input {
   flex: 2;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
 }
 
-.add-word-form .form-row select {
+.form-row select {
   flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 14px;
+  border-radius: var(--border-radius-sm);
 }
 
 .add-word-btn {
@@ -256,7 +334,7 @@
   background: var(--success-hover);
 }
 
-.banwords-tab .form-hint {
+.form-hint {
   font-size: 12px;
   color: var(--text-muted);
   background: var(--bg-tertiary);
@@ -268,16 +346,26 @@
   .info-stats {
     flex-direction: column;
   }
-
-  .add-word-form .form-row {
+  
+  .word-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .word-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .form-row {
     flex-direction: column;
   }
-
+  
   .add-word-btn {
     width: 100%;
     justify-content: center;
   }
-
+  
   .rule-item {
     flex-direction: column;
     align-items: flex-start;

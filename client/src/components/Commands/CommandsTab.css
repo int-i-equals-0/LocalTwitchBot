@@ -1,6 +1,16 @@
 /* client/src/components/Commands/CommandsTab.css */
+.commands-header {
+  margin-bottom: 24px;
+}
+
+.commands-header h2 {
+  color: var(--accent);
+  margin-bottom: 8px;
+}
 
 .commands-description {
+  color: var(--text-muted);
+  font-size: 14px;
   margin-bottom: 16px;
 }
 
@@ -21,10 +31,91 @@
   background: var(--accent-hover);
 }
 
+.commands-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.empty-commands {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg-card);
+  border: 2px dashed var(--border-color);
+  border-radius: var(--border-radius);
+  color: var(--text-muted);
+}
+
+.empty-commands .hint {
+  font-size: 13px;
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+
+.command-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.command-card:hover {
+  border-color: var(--accent);
+}
+
+.command-card.disabled {
+  opacity: 0.6;
+}
+
+.command-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-tertiary);
+}
+
+.command-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .command-name {
   font-size: 18px;
   font-weight: bold;
   color: var(--accent);
+}
+
+.command-status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.command-status-badge.enabled {
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.command-status-badge.disabled {
+  background: var(--danger-light);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.command-type-badge {
+  background: var(--bg-input);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 .command-aliases-badge {
@@ -45,7 +136,181 @@
   border: 1px solid var(--accent);
 }
 
-/* PermissionsSelector — уникальные стили */
+.overlay-badge {
+  background: var(--info-light);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--info);
+  border: 1px solid var(--info);
+}
+
+.command-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-toggle-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.status-toggle-btn.on {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.status-toggle-btn.off {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.status-toggle-btn:hover {
+  background: var(--bg-hover);
+}
+
+.edit-btn {
+  background: var(--info);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.edit-btn:hover {
+  background: var(--info-hover);
+}
+
+.delete-btn {
+  background: var(--danger);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.delete-btn:hover {
+  background: var(--danger-hover);
+}
+
+/* Create Command Modal */
+.create-command-modal {
+  padding: 4px 0;
+}
+
+.create-command-modal .form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.create-command-modal .form-actions button {
+  padding: 10px 20px;
+}
+
+/* Command Editor */
+.command-editor {
+  padding: 8px 0;
+}
+
+.command-editor-header {
+  margin-bottom: 20px;
+}
+
+.command-name-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.command-name-input {
+  width: 100%;
+  max-width: 400px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 12px 16px;
+  border-radius: var(--border-radius-sm);
+  font-size: 16px;
+}
+
+.command-name-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.command-preview {
+  margin-top: 8px;
+}
+
+.preview-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+.command-preview-name {
+  background: var(--accent-light);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--accent);
+  font-family: monospace;
+}
+
+.command-editor-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.save-command-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-command-btn:hover {
+  background: var(--success-hover);
+}
+
+/* Permissions Selector */
 .permissions-selector {
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
@@ -135,6 +400,11 @@
 
 .add-user input {
   flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: var(--border-radius-sm);
 }
 
 .add-user-btn {
@@ -161,19 +431,28 @@
 }
 
 @media (max-width: 768px) {
+  .command-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .command-actions {
+    flex-wrap: wrap;
+  }
+  
   .role-buttons {
     flex-direction: column;
   }
-
+  
   .role-btn {
     width: 100%;
     text-align: center;
   }
-
+  
   .add-user {
     flex-direction: column;
   }
-
+  
   .add-user-btn {
     width: 100%;
     justify-content: center;

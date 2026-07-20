@@ -12,36 +12,44 @@ function LogsTab() {
   const logsEndRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
-  const pausedRef = useRef(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-
-  // Синхронизируем ref с state
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
 
   const getLogClass = (log) => {
     const message = log.message || log;
-    if (message.includes('❌') || message.includes('Error') || message.includes('Ошибка')) return 'log-error';
-    if (message.includes('⚠️') || message.includes('Warning') || message.includes('предупрежд')) return 'log-warning';
-    if (message.includes('✅') || message.includes('Success') || message.includes('успешно')) return 'log-success';
-    if (message.includes('📨') || message.includes('Command') || message.includes('Команда')) return 'log-command';
-    if (message.includes('🎬') || message.includes('Media') || message.includes('Медиа')) return 'log-media';
-    if (message.includes('🚫') || message.includes('Ban') || message.includes('Бан')) return 'log-ban';
+    if (message.includes('❌') || message.includes('Error') || message.includes('Ошибка')) {
+      return 'log-error';
+    }
+    if (message.includes('⚠️') || message.includes('Warning') || message.includes('предупрежд')) {
+      return 'log-warning';
+    }
+    if (message.includes('✅') || message.includes('Success') || message.includes('успешно')) {
+      return 'log-success';
+    }
+    if (message.includes('📨') || message.includes('Command') || message.includes('Команда')) {
+      return 'log-command';
+    }
+    if (message.includes('🎬') || message.includes('Media') || message.includes('Медиа')) {
+      return 'log-media';
+    }
+    if (message.includes('🚫') || message.includes('Ban') || message.includes('Бан')) {
+      return 'log-ban';
+    }
     return 'log-info';
   };
 
   const filteredLogs = logs.filter(log => {
     const message = log.message || log;
-    if (filter && !message.toLowerCase().includes(filter.toLowerCase())) return false;
-
+    if (filter && !message.toLowerCase().includes(filter.toLowerCase())) {
+      return false;
+    }
+    
     if (logLevel !== 'all') {
       const logClass = getLogClass(log);
       if (logLevel === 'info' && !['log-info', 'log-success', 'log-command', 'log-media'].includes(logClass)) return false;
       if (logLevel === 'warning' && logClass !== 'log-warning') return false;
       if (logLevel === 'error' && logClass !== 'log-error') return false;
     }
-
+    
     return true;
   });
 
@@ -53,9 +61,14 @@ function LogsTab() {
 
   useEffect(() => {
     connectWebSocket();
+
     return () => {
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
     };
   }, []);
 
@@ -66,7 +79,7 @@ function LogsTab() {
 
     try {
       wsRef.current = new WebSocket('ws://localhost:8081');
-
+      
       wsRef.current.onopen = () => {
         setConnectionStatus('connected');
         if (reconnectTimerRef.current) {
@@ -74,10 +87,9 @@ function LogsTab() {
           reconnectTimerRef.current = null;
         }
       };
-
+      
       wsRef.current.onmessage = (event) => {
-        // Читаем из ref, а не из замыкания state
-        if (!pausedRef.current) {
+        if (!paused) {
           try {
             const logData = JSON.parse(event.data);
             setLogs(prev => {
@@ -86,11 +98,11 @@ function LogsTab() {
                 message: logData.message,
                 timeStr: new Date(logData.timestamp).toLocaleTimeString()
               };
-
+              
               if (prev.length > 0 && prev[prev.length - 1].message === newLog.message) {
                 return prev;
               }
-
+              
               return [...prev, newLog].slice(-1000);
             });
           } catch (e) {
@@ -98,13 +110,14 @@ function LogsTab() {
           }
         }
       };
-
+      
       wsRef.current.onerror = () => {
         setConnectionStatus('error');
       };
-
+      
       wsRef.current.onclose = () => {
         setConnectionStatus('disconnected');
+        
         if (!reconnectTimerRef.current) {
           reconnectTimerRef.current = setTimeout(() => {
             reconnectTimerRef.current = null;
@@ -116,9 +129,11 @@ function LogsTab() {
       console.error('Ошибка подключения к логам:', error);
       setConnectionStatus('error');
     }
-  }, []);
+  }, [paused]);
 
-  const clearLogs = () => setLogs([]);
+  const clearLogs = () => {
+    setLogs([]);
+  };
 
   const exportLogs = () => {
     const logText = logs.map(log => `[${log.timeStr}] ${log.message}`).join('\n');
@@ -129,6 +144,15 @@ function LogsTab() {
     a.download = `bot-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const getConnectionIcon = () => {
+    switch (connectionStatus) {
+      case 'connected': return '🟢';
+      case 'disconnected': return '🔴';
+      case 'error': return '🟡';
+      default: return '⚪';
+    }
   };
 
   const getConnectionText = () => {
@@ -169,7 +193,11 @@ function LogsTab() {
 
         <div className="filter-group">
           <FaFilter className="filter-icon" />
-          <select value={logLevel} onChange={(e) => setLogLevel(e.target.value)} className="level-select">
+          <select 
+            value={logLevel} 
+            onChange={(e) => setLogLevel(e.target.value)}
+            className="level-select"
+          >
             <option value="all">Все уровни</option>
             <option value="info">ℹ️ Инфо</option>
             <option value="warning">⚠️ Предупреждения</option>
@@ -178,24 +206,29 @@ function LogsTab() {
         </div>
 
         <div className="control-buttons">
-          <button
-            onClick={() => setAutoScroll(!autoScroll)}
+          <button 
+            onClick={() => setAutoScroll(!autoScroll)} 
             className={`control-btn ${autoScroll ? 'active' : ''}`}
             title={autoScroll ? 'Автоскролл вкл' : 'Автоскролл выкл'}
           >
             {autoScroll ? <FaPlay /> : <FaPause />}
           </button>
 
-          <button
-            onClick={() => setPaused(!paused)}
+          <button 
+            onClick={() => setPaused(!paused)} 
             className={`control-btn ${paused ? 'paused' : ''}`}
             title={paused ? 'Возобновить' : 'Пауза'}
           >
             {paused ? <FaPlay /> : <FaPause />}
           </button>
 
-          <button onClick={clearLogs} className="control-btn" title="Очистить"><FaTrash /></button>
-          <button onClick={exportLogs} className="control-btn" title="Экспорт"><FaDownload /></button>
+          <button onClick={clearLogs} className="control-btn" title="Очистить">
+            <FaTrash />
+          </button>
+
+          <button onClick={exportLogs} className="control-btn" title="Экспорт">
+            <FaDownload />
+          </button>
         </div>
       </div>
 
@@ -210,7 +243,9 @@ function LogsTab() {
             ) : (
               <>
                 <p>🔍 Нет логов, соответствующих фильтру</p>
-                <button onClick={() => setFilter('')} className="clear-filter-btn">Очистить фильтр</button>
+                <button onClick={() => setFilter('')} className="clear-filter-btn">
+                  Очистить фильтр
+                </button>
               </>
             )}
           </div>

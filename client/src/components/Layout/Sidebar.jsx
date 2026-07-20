@@ -9,8 +9,8 @@ const MENU_ITEMS = [
   { id: 'commands', label: 'Команды', icon: FaRobot },
   { id: 'rewards', label: 'Баллы канала', icon: FaGift },
   { id: 'events', label: 'События', icon: FaCalendarAlt },
-  { id: 'periodic', label: 'Периодическое', icon: FaClock },
   { id: 'shoutouts', label: 'Шатауты', icon: FaBullhorn },
+  { id: 'periodic', label: 'Периодическое', icon: FaClock },
   { id: 'banwords', label: 'Банворды', icon: FaBan },
   { id: 'logs', label: 'Логи', icon: FaFileAlt }
 ];

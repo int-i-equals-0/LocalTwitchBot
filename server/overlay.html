@@ -8,15 +8,14 @@
     <meta http-equiv="Expires" content="0">
     <title>Twitch Bot Overlay</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: transparent;
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: transparent; 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-
-        #media-container,
-        .immediate-layer {
+        
+        #media-container {
             position: fixed;
             top: 0;
             left: 0;
@@ -38,10 +37,10 @@
             box-sizing: border-box;
         }
 
-        .media-wrapper.position-above  { flex-direction: column-reverse; }
-        .media-wrapper.position-below  { flex-direction: column; }
-        .media-wrapper.position-left   { flex-direction: row; }
-        .media-wrapper.position-right  { flex-direction: row-reverse; }
+        .media-wrapper.position-above { flex-direction: column-reverse; }
+        .media-wrapper.position-below { flex-direction: column; }
+        .media-wrapper.position-left { flex-direction: row; }
+        .media-wrapper.position-right { flex-direction: row-reverse; }
         .media-wrapper.position-overlay {
             position: relative;
             display: inline-block;
@@ -57,76 +56,53 @@
             min-height: 0;
         }
 
-        /* ===== ENTER ANIMATIONS ===== */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to   { opacity: 1; }
-        }
+        /* ===== АНИМАЦИИ ПОЯВЛЕНИЯ/СКРЫТИЯ МЕДИА ===== */
         @keyframes fadeInLeft {
             from { opacity: 0; transform: translateX(-100%); }
-            to   { opacity: 1; transform: translateX(0); }
+            to { opacity: 1; transform: translateX(0); }
         }
         @keyframes fadeInRight {
             from { opacity: 0; transform: translateX(100%); }
-            to   { opacity: 1; transform: translateX(0); }
+            to { opacity: 1; transform: translateX(0); }
         }
         @keyframes fadeInTop {
             from { opacity: 0; transform: translateY(-100%); }
-            to   { opacity: 1; transform: translateY(0); }
+            to { opacity: 1; transform: translateY(0); }
         }
         @keyframes fadeInBottom {
             from { opacity: 0; transform: translateY(100%); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0); }
-            to   { opacity: 1; transform: scale(1); }
-        }
-
-        .media-enter-fadeIn       { animation: fadeIn       0.5s ease forwards; }
-        .media-enter-fadeInLeft   { animation: fadeInLeft   0.5s ease forwards; }
-        .media-enter-fadeInRight  { animation: fadeInRight  0.5s ease forwards; }
-        .media-enter-fadeInTop    { animation: fadeInTop    0.5s ease forwards; }
-        .media-enter-fadeInBottom { animation: fadeInBottom  0.5s ease forwards; }
-        .media-enter-scaleIn      { animation: scaleIn      0.5s ease forwards; }
-
-        /* ===== EXIT ANIMATIONS ===== */
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to   { opacity: 0; }
+            to { opacity: 1; transform: translateY(0); }
         }
         @keyframes fadeOutLeft {
             from { opacity: 1; transform: translateX(0); }
-            to   { opacity: 0; transform: translateX(-100%); }
+            to { opacity: 0; transform: translateX(-100%); }
         }
         @keyframes fadeOutRight {
             from { opacity: 1; transform: translateX(0); }
-            to   { opacity: 0; transform: translateX(100%); }
+            to { opacity: 0; transform: translateX(100%); }
         }
         @keyframes fadeOutTop {
             from { opacity: 1; transform: translateY(0); }
-            to   { opacity: 0; transform: translateY(-100%); }
+            to { opacity: 0; transform: translateY(-100%); }
         }
         @keyframes fadeOutBottom {
             from { opacity: 1; transform: translateY(0); }
-            to   { opacity: 0; transform: translateY(100%); }
-        }
-        @keyframes scaleOut {
-            from { opacity: 1; transform: scale(1); }
-            to   { opacity: 0; transform: scale(0); }
+            to { opacity: 0; transform: translateY(100%); }
         }
 
-        .media-exit-fadeOut       { animation: fadeOut       0.5s ease forwards; }
-        .media-exit-fadeOutLeft   { animation: fadeOutLeft   0.5s ease forwards; }
-        .media-exit-fadeOutRight  { animation: fadeOutRight  0.5s ease forwards; }
-        .media-exit-fadeOutTop    { animation: fadeOutTop    0.5s ease forwards; }
-        .media-exit-fadeOutBottom { animation: fadeOutBottom  0.5s ease forwards; }
-        .media-exit-scaleOut      { animation: scaleOut      0.5s ease forwards; }
+        .media-enter-fadeInLeft { animation: fadeInLeft 0.5s ease forwards; }
+        .media-enter-fadeInRight { animation: fadeInRight 0.5s ease forwards; }
+        .media-enter-fadeInTop { animation: fadeInTop 0.5s ease forwards; }
+        .media-enter-fadeInBottom { animation: fadeInBottom 0.5s ease forwards; }
+        .media-exit-fadeOutLeft { animation: fadeOutLeft 0.5s ease forwards; }
+        .media-exit-fadeOutRight { animation: fadeOutRight 0.5s ease forwards; }
+        .media-exit-fadeOutTop { animation: fadeOutTop 0.5s ease forwards; }
+        .media-exit-fadeOutBottom { animation: fadeOutBottom 0.5s ease forwards; }
 
-        /* ===== TEXT ELEMENT ===== */
+        /* ===== ТЕКСТОВЫЙ ЭЛЕМЕНТ — без фона, без рамок ===== */
         .text-element {
             padding: 12px 24px;
-            text-shadow: 0 0 1px #000, 0 0 2px #000, 0 0 3px #000, 0 0 4px #000, 0 0 5px #000;
+            text-shadow: 0px 0px 1px #000, 0px 0px 2px #000, 0px 0px 3px #000, 0px 0px 4px #000, 0px 0px 5px #000;
             word-wrap: break-word;
             text-align: center;
             box-sizing: border-box;
@@ -137,6 +113,7 @@
             font-style: normal;
             font-family: 'Segoe UI', sans-serif;
         }
+
         .text-element .char {
             display: inline-block;
             white-space: pre;
@@ -147,11 +124,13 @@
             margin: 15px;
             max-width: calc(100% - 40px);
         }
+
         .media-wrapper.position-left .text-element,
         .media-wrapper.position-right .text-element {
             margin: 15px;
             max-width: 40vw;
         }
+
         .media-wrapper.position-overlay .text-element {
             position: absolute;
             top: 50%; left: 50%;
@@ -165,73 +144,81 @@
             padding: 16px 32px;
         }
 
-        /* ===== CHARACTER ANIMATIONS ===== */
+        /* ===== АНИМАЦИИ ТЕКСТОВЫХ СИМВОЛОВ ===== */
         @keyframes charBounce {
             0%, 100% { transform: translateY(0); }
-            40%  { transform: translateY(-0.25em); }
-            60%  { transform: translateY(-0.125em); }
+            40% { transform: translateY(-0.25em); }
+            60% { transform: translateY(-0.125em); }
         }
+
         @keyframes charPulse {
             0%, 100% { transform: scale(1); }
-            50%  { transform: scale(1.15); }
+            50% { transform: scale(1.15); } 
         }
+
         @keyframes charRubberBand {
-            0%   { transform: scale(1, 1); }
-            30%  { transform: scale(1.15, 0.85); }
-            40%  { transform: scale(0.85, 1.15); }
-            50%  { transform: scale(1.1, 0.9); }
-            65%  { transform: scale(0.95, 1.05); }
-            75%  { transform: scale(1.05, 0.95); }
+            0% { transform: scale(1, 1); }
+            30% { transform: scale(1.15, 0.85); }
+            40% { transform: scale(0.85, 1.15); }
+            50% { transform: scale(1.1, 0.9); }
+            65% { transform: scale(0.95, 1.05); }
+            75% { transform: scale(1.05, 0.95); }
             100% { transform: scale(1, 1); }
         }
+
         @keyframes charTada {
-            0%         { transform: scale(1) rotate(0deg); }
-            10%, 20%   { transform: scale(0.95) rotate(-2deg); }
+            0% { transform: scale(1) rotate(0deg); }
+            10%, 20% { transform: scale(0.95) rotate(-2deg); }
             30%, 50%, 70%, 90% { transform: scale(1.08) rotate(2deg); }
-            40%, 60%, 80%      { transform: scale(1.08) rotate(-2deg); }
-            100%       { transform: scale(1) rotate(0deg); }
+            40%, 60%, 80% { transform: scale(1.08) rotate(-2deg); }
+            100% { transform: scale(1) rotate(0deg); }
         }
+
         @keyframes charWave {
             0%, 100% { transform: translateY(0); }
-            50%  { transform: translateY(-0.25em); }
+            50% { transform: translateY(-0.25em); }
         }
+
         @keyframes charWiggle {
             0%, 100% { transform: rotate(0deg); }
-            25%  { transform: rotate(3deg); }
-            50%  { transform: rotate(0deg); }
-            75%  { transform: rotate(-3deg); }
+            25% { transform: rotate(3deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-3deg); }
         }
+
         @keyframes charWobble {
-            0%   { transform: translateX(0) rotate(0deg); }
-            15%  { transform: translateX(-0.125em) rotate(-3deg); }
-            30%  { transform: translateX(0.1em) rotate(2deg); }
-            45%  { transform: translateX(-0.075em) rotate(-1.5deg); }
-            60%  { transform: translateX(0.05em) rotate(1deg); }
-            75%  { transform: translateX(-0.025em) rotate(-0.5deg); }
+            0% { transform: translateX(0) rotate(0deg); }
+            15% { transform: translateX(-0.125em) rotate(-3deg); }
+            30% { transform: translateX(0.1em) rotate(2deg); }
+            45% { transform: translateX(-0.075em) rotate(-1.5deg); }
+            60% { transform: translateX(0.05em) rotate(1deg); }
+            75% { transform: translateX(-0.025em) rotate(-0.5deg); }
             100% { transform: translateX(0) rotate(0deg); }
         }
 
-        .char-anim-bounce    { animation: charBounce    0.6s ease both infinite; }
-        .char-anim-pulse     { animation: charPulse     0.6s ease both infinite; }
-        .char-anim-rubberBand{ animation: charRubberBand 0.8s ease both infinite; }
-        .char-anim-tada      { animation: charTada      0.8s ease both infinite; }
-        .char-anim-wave      { animation: charWave      0.6s ease both infinite; }
-        .char-anim-wiggle    { animation: charWiggle    0.6s ease both infinite; }
-        .char-anim-wobble    { animation: charWobble    0.8s ease both infinite; }
+        .char-anim-bounce { animation: charBounce 0.6s ease both infinite; }
+        .char-anim-pulse { animation: charPulse 0.6s ease both infinite; }
+        .char-anim-rubberBand { animation: charRubberBand 0.8s ease both infinite; }
+        .char-anim-tada { animation: charTada 0.8s ease both infinite; }
+        .char-anim-wave { animation: charWave 0.6s ease both infinite; }
+        .char-anim-wiggle { animation: charWiggle 0.6s ease both infinite; }
+        .char-anim-wobble { animation: charWobble 0.8s ease both infinite; }
 
-        /* ===== UTILITY ===== */
         .hidden { display: none !important; }
+        .audio-indicator { display: none !important; }
+        .loading-indicator { display: none !important; }
+        .media-wrapper.audio-only { display: none !important; }
 
         .debug-info {
             position: fixed;
             bottom: 10px; left: 10px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             color: #0f0;
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 12px;
             font-family: monospace;
-            z-index: 99999;
+            z-index: 9999;
             display: none;
         }
         .debug-info.visible { display: block; }
@@ -240,53 +227,18 @@
 <body>
     <div id="debug-info" class="debug-info"></div>
     <div id="media-container" class="hidden"></div>
-    <!-- Immediate containers are created dynamically -->
-
+    
     <script>
-        // ===== CONSTANTS =====
         const DEBUG = localStorage.getItem('overlay_debug') === 'true';
         const WS_RECONNECT_DELAY = 3000;
         const MEDIA_PAUSE_DELAY = 3000;
         const IMAGE_DURATION = 10;
         const ENTER_EXIT_DURATION = 500;
 
-        // ===== OVERLAY IDENTITY =====
         const pathParts = window.location.pathname.split('/').filter(Boolean);
         const overlayPath = pathParts.length > 1 ? pathParts[pathParts.length - 1] : 'default';
         let overlayId = 'default';
 
-        // ===== STATE =====
-        let ws = null;
-        let reconnectTimer = null;
-        let mediaQueue = [];
-        let isPlaying = false;
-        let audioContext = null;
-        let currentMedia = null;          // Только для queue mode
-        let knownServerStartTime = null;
-        let serverDown = false;
-        let immediateZIndex = 2000;       // z-index счётчик для immediate слоёв
-
-        // ===== DOM =====
-        const container = document.getElementById('media-container');
-        const debugEl = document.getElementById('debug-info');
-
-        // ===== LOGGING =====
-        function log(...args) {
-            if (DEBUG) {
-                console.log('[Overlay]', ...args);
-                if (debugEl) debugEl.textContent = `[${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
-            }
-        }
-        function error(...args) {
-            console.error('[Overlay]', ...args);
-            if (debugEl) {
-                debugEl.style.color = '#ff6b6b';
-                debugEl.textContent = `❌ [${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
-            }
-        }
-        if (DEBUG) debugEl.classList.add('visible');
-
-        // ===== RESOLVE OVERLAY ID =====
         async function resolveOverlayId() {
             try {
                 const response = await fetch('/api/config');
@@ -305,7 +257,38 @@
             }
         }
 
-        // ===== SERVER HEALTH =====
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsHost = window.location.hostname;
+        const wsPort = 8080;
+
+        let ws = null;
+        let reconnectTimer = null;
+        let mediaQueue = [];
+        let isPlaying = false;
+        let audioContext = null;
+        let currentMedia = null;
+        let knownServerStartTime = null;
+        let serverDown = false;
+
+        const container = document.getElementById('media-container');
+        const debugEl = document.getElementById('debug-info');
+
+        function log(...args) {
+            if (DEBUG) {
+                console.log('[Overlay]', ...args);
+                if (debugEl) debugEl.textContent = `[${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
+            }
+        }
+        function error(...args) {
+            console.error('[Overlay]', ...args);
+            if (debugEl) {
+                debugEl.style.color = '#ff6b6b';
+                debugEl.textContent = `❌ [${new Date().toLocaleTimeString()}] ${args.join(' ')}`;
+            }
+        }
+        if (DEBUG) debugEl.classList.add('visible');
+
+        // ===== SERVER HEALTH MONITOR =====
         async function checkServerHealth() {
             try {
                 const controller = new AbortController();
@@ -331,7 +314,7 @@
             setInterval(checkServerHealth, 5000);
         }
 
-        // ===== UTILITIES =====
+        // ===== УТИЛИТЫ =====
         function getMediaType(filename) {
             if (!filename) return 'unknown';
             const ext = filename.split('.').pop().toLowerCase();
@@ -340,128 +323,44 @@
             if (['jpg','jpeg','png','gif','webp','bmp','svg','apng'].includes(ext)) return 'image';
             return 'unknown';
         }
-        function formatTime(s) {
-            return `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+        function formatTime(seconds) {
+            return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
         }
 
-        // ===== TEXT ANIMATION =====
+        // ===== ТЕКСТОВАЯ АНИМАЦИЯ =====
         function createAnimatedText(textContent, animationType, fontSettings) {
             const el = document.createElement('div');
             el.className = 'text-element';
+
             if (fontSettings) {
                 if (fontSettings.fontFamily) el.style.fontFamily = fontSettings.fontFamily;
-                if (fontSettings.fontSize)   el.style.fontSize   = fontSettings.fontSize + 'px';
-                if (fontSettings.fontWeight)  el.style.fontWeight  = fontSettings.fontWeight;
-                if (fontSettings.fontStyle)   el.style.fontStyle   = fontSettings.fontStyle;
-                if (fontSettings.color)       el.style.color       = fontSettings.color;
+                if (fontSettings.fontSize) el.style.fontSize = fontSettings.fontSize + 'px';
+                if (fontSettings.fontWeight) el.style.fontWeight = fontSettings.fontWeight;
+                if (fontSettings.fontStyle) el.style.fontStyle = fontSettings.fontStyle;
+                if (fontSettings.color) el.style.color = fontSettings.color;
             }
+
             if (!animationType || animationType === 'none') {
                 el.textContent = textContent;
                 return el;
             }
-            textContent.split('').forEach((char, i) => {
+
+            const chars = textContent.split('');
+            chars.forEach((char, index) => {
                 const span = document.createElement('span');
                 span.className = `char char-anim-${animationType}`;
-                span.style.animationDelay = `${i * 0.05}s`;
+                span.style.animationDelay = `${index * 0.05}s`;
                 span.textContent = char;
                 el.appendChild(span);
             });
+
             return el;
         }
 
-        // ===== MEDIA + TEXT WRAPPER =====
-        function createMediaWithText(mediaData) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'media-wrapper';
-            const textPosition = mediaData.text?.position || 'overlay';
-            if (mediaData.text?.enabled) wrapper.classList.add('position-' + textPosition);
-
-            let mediaElement = null;
-            if (mediaData.type === 'video') {
-                mediaElement = document.createElement('video');
-                mediaElement.className = 'media-element video';
-                mediaElement.controls = false;
-                mediaElement.autoplay = true;
-                mediaElement.loop = false;
-                mediaElement.muted = false;
-                mediaElement.playsInline = true;
-                mediaElement.volume = mediaData.volume / 100;
-                mediaElement.preload = 'auto';
-            } else if (mediaData.type === 'image') {
-                mediaElement = document.createElement('img');
-                mediaElement.className = 'media-element image';
-                mediaElement.alt = '';
-                mediaElement.loading = 'eager';
-            }
-
-            if (mediaElement) {
-                mediaElement.src = mediaData.src;
-                const enterAnim = mediaData.animation?.enter;
-                if (enterAnim && enterAnim !== 'none') {
-                    mediaElement.classList.add(`media-enter-${enterAnim}`);
-                }
-            }
-
-            // Собираем элементы в правильном порядке
-            const hasText = mediaData.text?.enabled && mediaData.text?.content;
-            let textElement = null;
-            if (hasText) {
-                textElement = createAnimatedText(
-                    mediaData.text.content,
-                    mediaData.text.animation || 'none',
-                    mediaData.text.font || null
-                );
-            }
-
-            if (hasText && textElement && mediaElement) {
-                const pos = textPosition;
-                if (pos === 'above')      { wrapper.appendChild(textElement); wrapper.appendChild(mediaElement); }
-                else if (pos === 'below')  { wrapper.appendChild(mediaElement); wrapper.appendChild(textElement); }
-                else if (pos === 'left')   { wrapper.appendChild(textElement); wrapper.appendChild(mediaElement); }
-                else if (pos === 'right')  { wrapper.appendChild(mediaElement); wrapper.appendChild(textElement); }
-                else /* overlay */         { wrapper.appendChild(mediaElement); wrapper.appendChild(textElement); }
-            } else if (mediaElement) {
-                wrapper.appendChild(mediaElement);
-            } else if (textElement) {
-                wrapper.appendChild(textElement);
-            }
-
-            return wrapper;
-        }
-
-        // ===== EXIT ANIMATION HELPER =====
-        function applyExitAnimation(containerEl, exitAnim, onComplete) {
-            if (!exitAnim || exitAnim === 'none') {
-                onComplete();
-                return;
-            }
-            const mediaEl = containerEl.querySelector('.media-element');
-            if (mediaEl) {
-                mediaEl.className = mediaEl.className.replace(/media-enter-\S+/g, '').trim();
-                mediaEl.classList.add(`media-exit-${exitAnim}`);
-                setTimeout(onComplete, ENTER_EXIT_DURATION);
-            } else {
-                onComplete();
-            }
-        }
-
-        // ===== VIDEO ERROR DIAGNOSTICS =====
-        function describeVideoError(videoEl) {
-            const err = videoEl.error;
-            if (!err) return 'Неизвестная ошибка';
-            switch (err.code) {
-                case 1: return 'Воспроизведение прервано (MEDIA_ERR_ABORTED)';
-                case 2: return 'Сетевая ошибка при загрузке (MEDIA_ERR_NETWORK)';
-                case 3: return 'Ошибка декодирования — возможно, неподдерживаемый кодек (H.265/HEVC). Перекодируйте в H.264 (MEDIA_ERR_DECODE)';
-                case 4: return 'Формат видео не поддерживается браузером (MEDIA_ERR_SRC_NOT_SUPPORTED)';
-                default: return `Код ошибки: ${err.code}, ${err.message || ''}`;
-            }
-        }
-
-        // ===== AUDIO: QUEUE MODE =====
+        // ===== АУДИО =====
         async function playAudioWithWebAudio(src, volume) {
             try {
-                log('🎵 Аудио (очередь):', src);
+                log('🎵 Аудио:', src);
                 if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 if (audioContext.state === 'suspended') await audioContext.resume();
                 const response = await fetch(src);
@@ -489,46 +388,107 @@
             }
         }
 
-        // ===== AUDIO: IMMEDIATE MODE (не влияет на очередь) =====
-        async function playAudioDirect(src, volume, onEnded) {
-            try {
-                log('🎵 Аудио (immediate):', src);
-                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                if (audioContext.state === 'suspended') await audioContext.resume();
-                const response = await fetch(src);
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const arrayBuffer = await response.arrayBuffer();
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                const source = audioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                const gainNode = audioContext.createGain();
-                gainNode.gain.value = volume / 100;
-                source.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                source.start();
-                source.onended = () => {
-                    source.disconnect(); gainNode.disconnect();
-                    if (onEnded) onEnded();
-                };
-            } catch (err) {
-                error('❌ Ошибка аудио (immediate):', err);
-                if (onEnded) onEnded();
+        // ===== СОЗДАНИЕ МЕДИА С ТЕКСТОМ =====
+        function createMediaWithText(mediaData) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'media-wrapper';
+
+            const textPosition = mediaData.text?.position || 'overlay';
+            if (mediaData.text && mediaData.text.enabled) {
+                wrapper.classList.add('position-' + textPosition);
             }
+
+            let mediaElement;
+            if (mediaData.type === 'video') {
+                mediaElement = document.createElement('video');
+                mediaElement.className = 'media-element video';
+                mediaElement.controls = false;
+                mediaElement.autoplay = true;
+                mediaElement.loop = false;
+                mediaElement.muted = false;
+                mediaElement.playsInline = true;
+                mediaElement.volume = mediaData.volume / 100;
+                mediaElement.preload = 'auto';
+            } else if (mediaData.type === 'image') {
+                mediaElement = document.createElement('img');
+                mediaElement.className = 'media-element image';
+                mediaElement.alt = '';
+                mediaElement.loading = 'eager';
+            }
+
+            if (mediaElement) {
+                mediaElement.src = mediaData.src;
+                const enterAnim = mediaData.animation?.enter;
+                if (enterAnim && enterAnim !== 'none') {
+                    mediaElement.classList.add(`media-enter-${enterAnim}`);
+                }
+            }
+
+            if (mediaData.text && mediaData.text.enabled && mediaData.text.content) {
+                const textAnim = mediaData.text.animation || 'none';
+                const fontSettings = mediaData.text.font || null;
+                const textElement = createAnimatedText(mediaData.text.content, textAnim, fontSettings);
+
+                const position = textPosition;
+                if (position === 'overlay') {
+                    wrapper.appendChild(mediaElement);
+                    wrapper.appendChild(textElement);
+                } else if (position === 'above') {
+                    wrapper.appendChild(textElement);
+                    wrapper.appendChild(mediaElement);
+                } else if (position === 'below') {
+                    wrapper.appendChild(mediaElement);
+                    wrapper.appendChild(textElement);
+                } else if (position === 'left') {
+                    wrapper.appendChild(textElement);
+                    wrapper.appendChild(mediaElement);
+                } else if (position === 'right') {
+                    wrapper.appendChild(mediaElement);
+                    wrapper.appendChild(textElement);
+                }
+            } else if (mediaElement) {
+                wrapper.appendChild(mediaElement);
+            }
+
+            return wrapper;
         }
 
-        // ========================================================
-        //  QUEUE MODE — стандартная очередь (одно за другим)
-        // ========================================================
-
-        function finishQueuedMedia(exitAnim) {
-            applyExitAnimation(container, exitAnim, () => {
+        // ===== АНИМАЦИЯ СКРЫТИЯ =====
+        function animateExitAndRemove(exitAnim, callback) {
+            if (!exitAnim || exitAnim === 'none') {
                 container.classList.add('hidden');
                 container.innerHTML = '';
                 currentMedia = null;
+                callback();
+                return;
+            }
+
+            const mediaEl = container.querySelector('.media-element');
+            if (mediaEl) {
+                mediaEl.className = mediaEl.className.replace(/media-enter-\S+/g, '').trim();
+                mediaEl.classList.add(`media-exit-${exitAnim}`);
+                setTimeout(() => {
+                    container.classList.add('hidden');
+                    container.innerHTML = '';
+                    currentMedia = null;
+                    callback();
+                }, ENTER_EXIT_DURATION);
+            } else {
+                container.classList.add('hidden');
+                container.innerHTML = '';
+                currentMedia = null;
+                callback();
+            }
+        }
+
+        // ===== ФУНКЦИЯ ЗАВЕРШЕНИЯ ВОСПРОИЗВЕДЕНИЯ =====
+        function finishMedia(exitAnim) {
+            animateExitAndRemove(exitAnim, () => {
                 setTimeout(() => playNext(), MEDIA_PAUSE_DELAY);
             });
         }
 
+        // ===== ОЧЕРЕДЬ ВОСПРОИЗВЕДЕНИЯ =====
         async function playNext() {
             if (mediaQueue.length === 0) {
                 isPlaying = false;
@@ -539,79 +499,94 @@
                 return;
             }
             isPlaying = true;
-            const item = mediaQueue.shift();
-            currentMedia = item;
-            log(`▶️ Очередь: ${item.type}: ${item.file} (осталось ${mediaQueue.length})`);
+            const nextMedia = mediaQueue.shift();
+            currentMedia = nextMedia;
+            log(`▶️ ${nextMedia.type}: ${nextMedia.file} (${mediaQueue.length} в очереди)`);
 
-            const exitAnim = item.animation?.exit || 'none';
+            // Сохраняем exitAnim для использования в колбэках
+            const exitAnim = nextMedia.animation?.exit || 'none';
 
             try {
-                if (item.type === 'audio') {
+                if (nextMedia.type === 'audio') {
                     container.classList.add('hidden');
                     container.innerHTML = '';
 
-                    if (item.text?.enabled && item.text?.content) {
+                    if (nextMedia.text && nextMedia.text.enabled && nextMedia.text.content) {
+                        const textAnim = nextMedia.text.animation || 'none';
+                        const fontSettings = nextMedia.text.font || null;
+                        const textElement = createAnimatedText(nextMedia.text.content, textAnim, fontSettings);
                         const wrapper = document.createElement('div');
                         wrapper.className = 'media-wrapper';
-                        wrapper.appendChild(createAnimatedText(item.text.content, item.text.animation || 'none', item.text.font));
+                        wrapper.appendChild(textElement);
                         container.innerHTML = '';
                         container.classList.remove('hidden');
                         container.appendChild(wrapper);
                     }
 
-                    await playAudioWithWebAudio(item.src, item.volume);
+                    await playAudioWithWebAudio(nextMedia.src, nextMedia.volume);
                 } else {
-                    const element = createMediaWithText(item);
+                    const element = createMediaWithText(nextMedia);
                     container.innerHTML = '';
                     container.classList.remove('hidden');
                     container.appendChild(element);
 
-                    if (item.type === 'video') {
+                    if (nextMedia.type === 'video') {
                         const video = element.querySelector('video');
                         if (video) {
                             let finished = false;
-                            const finish = (reason) => {
+                            
+                            const onEnded = () => {
                                 if (finished) return;
                                 finished = true;
-                                log(`✅ Видео ${reason}`);
-                                finishQueuedMedia(exitAnim);
+                                log('✅ Видео закончилось');
+                                finishMedia(exitAnim);
                             };
-                            video.addEventListener('ended', () => finish('закончилось'));
-                            video.addEventListener('error', () => {
-                                const msg = describeVideoError(video);
-                                error(`❌ Ошибка видео: ${msg}`);
-                                finish('ошибка');
-                            });
+                            
+                            const onError = (e) => {
+                                if (finished) return;
+                                finished = true;
+                                console.error('[VIDEO ERROR]', video.error);
+                                error(`Ошибка видео: ${video.error?.message || 'неизвестная ошибка'}`);
+                                finishMedia(exitAnim);
+                            };
+                            
+                            video.addEventListener('ended', onEnded);
+                            video.addEventListener('error', onError);
+                            
                             video.addEventListener('loadedmetadata', () => {
-                                log(`[VIDEO] ${video.videoWidth}x${video.videoHeight}, ${formatTime(video.duration)}`);
+                                log(`[VIDEO] ${video.videoWidth}x${video.videoHeight}, длит. ${formatTime(video.duration)}`);
                             });
+                            
                             try {
                                 await video.play();
                                 log(`▶️ Видео играет (${formatTime(video.duration)})`);
                             } catch (playErr) {
+                                if (finished) return;
+                                finished = true;
                                 error('❌ Видео не воспроизводится:', playErr.message);
                                 if (playErr.name === 'NotSupportedError') {
-                                    error('Кодек видео не поддерживается браузером. Используйте H.264 (MP4) или VP9 (WebM).');
+                                    error('Видео кодек не поддерживается браузером');
                                 }
-                                finish('play() error');
+                                finishMedia(exitAnim);
                             }
                         }
-                    } else if (item.type === 'image') {
-                        const duration = item.duration || IMAGE_DURATION;
+                    } else if (nextMedia.type === 'image') {
+                        const duration = nextMedia.duration || IMAGE_DURATION;
                         log(`🖼️ Изображение: ${duration} сек`);
-                        setTimeout(() => finishQueuedMedia(exitAnim), duration * 1000);
+                        setTimeout(() => {
+                            finishMedia(exitAnim);
+                        }, duration * 1000);
                     }
                 }
             } catch (err) {
                 error('❌ Ошибка:', err);
-                finishQueuedMedia(exitAnim);
+                finishMedia(exitAnim);
             }
         }
 
         function addToQueue(mediaData) {
-            // Дедупликация: не добавляем если то же самое сейчас играет
             if (currentMedia && currentMedia.file === mediaData.file && currentMedia.type === mediaData.type) {
-                log('⏭️ Дубликат (уже играет)');
+                log('⏭️ Дубликат');
                 return;
             }
             mediaQueue.push(mediaData);
@@ -619,105 +594,6 @@
             if (!isPlaying) playNext();
         }
 
-        // ========================================================
-        //  IMMEDIATE MODE — играет сразу, поверх всего
-        // ========================================================
-
-        function playImmediate(mediaData) {
-            log(`⚡ Немедленно: ${mediaData.type}: ${mediaData.file}`);
-
-            const exitAnim = mediaData.animation?.exit || 'none';
-
-            // Создаём отдельный слой
-            const layer = document.createElement('div');
-            layer.className = 'immediate-layer';
-            layer.style.zIndex = String(immediateZIndex++);
-            document.body.appendChild(layer);
-
-            function cleanup() {
-                applyExitAnimation(layer, exitAnim, () => {
-                    layer.remove();
-                });
-            }
-
-            try {
-                if (mediaData.type === 'audio') {
-                    // Текст (если есть)
-                    if (mediaData.text?.enabled && mediaData.text?.content) {
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'media-wrapper';
-                        wrapper.appendChild(createAnimatedText(
-                            mediaData.text.content,
-                            mediaData.text.animation || 'none',
-                            mediaData.text.font
-                        ));
-                        layer.appendChild(wrapper);
-                    }
-
-                    playAudioDirect(mediaData.src, mediaData.volume, () => {
-                        cleanup();
-                    });
-                } else {
-                    const element = createMediaWithText(mediaData);
-                    layer.appendChild(element);
-
-                    if (mediaData.type === 'video') {
-                        const video = element.querySelector('video');
-                        if (video) {
-                            let finished = false;
-                            const finish = (reason) => {
-                                if (finished) return;
-                                finished = true;
-                                log(`✅ Видео (imm) ${reason}`);
-                                cleanup();
-                            };
-                            video.addEventListener('ended', () => finish('закончилось'));
-                            video.addEventListener('error', () => {
-                                error(`❌ Видео (imm) ошибка: ${describeVideoError(video)}`);
-                                finish('ошибка');
-                            });
-                            video.play().catch(err => {
-                                error('❌ Видео (imm) не воспроизводится:', err.message);
-                                finish('play() error');
-                            });
-                        }
-                    } else if (mediaData.type === 'image') {
-                        setTimeout(cleanup, (mediaData.duration || IMAGE_DURATION) * 1000);
-                    }
-                }
-            } catch (err) {
-                error('❌ Ошибка (imm):', err);
-                cleanup();
-            }
-        }
-
-        // ========================================================
-        //  ROUTING: queue vs immediate
-        // ========================================================
-
-        function handleMediaCommand(data) {
-            const mediaPath = '/media/' + data.videoFile;
-            const mediaType = getMediaType(data.videoFile);
-
-            const mediaItem = {
-                src: mediaPath,
-                file: data.videoFile,
-                type: mediaType,
-                volume: data.volume || 100,
-                duration: data.duration || IMAGE_DURATION,
-                text: data.text || { enabled: false },
-                animation: data.animation || { enter: 'none', exit: 'none' },
-                queueMode: data.queueMode || 'queue'
-            };
-
-            if (mediaItem.queueMode === 'immediate') {
-                playImmediate(mediaItem);
-            } else {
-                addToQueue(mediaItem);
-            }
-        }
-
-        // ===== CLEAR =====
         function clearQueue() {
             mediaQueue = [];
             if (currentMedia) {
@@ -732,17 +608,7 @@
             log('🧹 Очередь очищена');
         }
 
-        function clearAll() {
-            clearQueue();
-            document.querySelectorAll('.immediate-layer').forEach(el => el.remove());
-            log('🧹 Всё очищено (очередь + immediate)');
-        }
-
         // ===== WEBSOCKET =====
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsHost = window.location.hostname;
-        const wsPort = 8080;
-
         function connectWebSocket() {
             if (ws && ws.readyState === WebSocket.OPEN) return;
             if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
@@ -751,36 +617,39 @@
 
             try {
                 ws = new WebSocket(wsUrl);
-
                 ws.onopen = () => {
                     log(`✅ WS подключен (overlay: ${overlayId})`);
                     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
                     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     ws.send(JSON.stringify({ command: 'register', overlayId, overlayPath }));
                 };
-
                 ws.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
-                        log('📩', data.command, data.videoFile || '');
-
+                        log('📩', data);
                         if (data.command === 'playVideo') {
-                            handleMediaCommand(data);
+                            const mediaPath = '/media/' + data.videoFile;
+                            const mediaType = getMediaType(data.videoFile);
+                            addToQueue({
+                                src: mediaPath,
+                                file: data.videoFile,
+                                type: mediaType,
+                                volume: data.volume || 100,
+                                duration: data.duration || IMAGE_DURATION,
+                                text: data.text || { enabled: false },
+                                animation: data.animation || { enter: 'none', exit: 'none' }
+                            });
                         } else if (data.command === 'clearQueue') {
                             clearQueue();
-                        } else if (data.command === 'clearAll') {
-                            clearAll();
                         } else if (data.command === 'ping') {
                             if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ command: 'pong' }));
                         }
-                    } catch (err) { error('❌ Ошибка WS-сообщения:', err); }
+                    } catch (err) { error('❌', err); }
                 };
-
                 ws.onerror = () => error('❌ WS ошибка');
-
                 ws.onclose = () => {
                     log('🔌 WS отключен');
-                    if (!reconnectTimer) reconnectTimer = setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+                    if (!reconnectTimer) reconnectTimer = setTimeout(() => { connectWebSocket(); }, WS_RECONNECT_DELAY);
                 };
             } catch (err) {
                 error('❌ WS:', err);
@@ -788,28 +657,23 @@
             }
         }
 
-        // ===== INIT =====
         async function init() {
             log('🚀 Инициализация...');
             await resolveOverlayId();
             connectWebSocket();
             startServerMonitor();
-
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden && audioContext && audioContext.state === 'suspended') audioContext.resume();
             });
-
             if (DEBUG) {
                 window.addEventListener('keydown', (e) => {
-                    if (e.key === 'c' && e.ctrlKey) { e.preventDefault(); clearAll(); }
+                    if (e.key === 'c' && e.ctrlKey) clearQueue();
                     if (e.key === 'd' && e.ctrlKey) {
-                        e.preventDefault();
                         debugEl.classList.toggle('visible');
                         localStorage.setItem('overlay_debug', debugEl.classList.contains('visible'));
                     }
                 });
             }
-
             log('✅ Готово');
         }
 

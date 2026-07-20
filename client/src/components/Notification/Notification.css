@@ -1,4 +1,6 @@
 /* client/src/components/Notification/Notification.css */
+
+/* Контейнер для уведомлений */
 .notifications-container {
   position: fixed;
   top: 20px;
@@ -10,6 +12,7 @@
   pointer-events: none;
 }
 
+/* Само уведомление */
 .notification {
   position: relative;
   min-width: 280px;
@@ -20,7 +23,7 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   pointer-events: auto;
-  animation: notifSlideIn 0.3s ease;
+  animation: slideIn 0.3s ease;
   overflow: hidden;
 }
 
@@ -29,10 +32,21 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 
-.notification.success { border-left: 4px solid var(--success); }
-.notification.error   { border-left: 4px solid var(--danger); }
-.notification.warning { border-left: 4px solid var(--warning); }
-.notification.info    { border-left: 4px solid var(--info); }
+.notification.success {
+  border-left: 4px solid var(--success);
+}
+
+.notification.error {
+  border-left: 4px solid var(--danger);
+}
+
+.notification.warning {
+  border-left: 4px solid var(--warning);
+}
+
+.notification.info {
+  border-left: 4px solid var(--info);
+}
 
 .notification-content {
   display: flex;
@@ -46,10 +60,21 @@
   flex-shrink: 0;
 }
 
-.notification.success .notification-icon { color: var(--success); }
-.notification.error .notification-icon   { color: var(--danger); }
-.notification.warning .notification-icon { color: var(--warning); }
-.notification.info .notification-icon    { color: var(--info); }
+.notification.success .notification-icon {
+  color: var(--success);
+}
+
+.notification.error .notification-icon {
+  color: var(--danger);
+}
+
+.notification.warning .notification-icon {
+  color: var(--warning);
+}
+
+.notification.info .notification-icon {
+  color: var(--info);
+}
 
 .notification-message {
   flex: 1;
@@ -86,14 +111,29 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.notification-progress .progress-bar { height: 100%; transition: width 0.05s linear; }
-.notification.success .progress-bar { background: var(--success); }
-.notification.error .progress-bar   { background: var(--danger); }
-.notification.warning .progress-bar { background: var(--warning); }
-.notification.info .progress-bar    { background: var(--info); }
+.notification-progress .progress-bar {
+  height: 100%;
+  transition: width 0.05s linear;
+}
 
-/* === CONFIRM MODAL (отдельные классы, не конфликтуют с Modal.css) === */
-.confirm-overlay {
+.notification.success .progress-bar {
+  background: var(--success);
+}
+
+.notification.error .progress-bar {
+  background: var(--danger);
+}
+
+.notification.warning .progress-bar {
+  background: var(--warning);
+}
+
+.notification.info .progress-bar {
+  background: var(--info);
+}
+
+/* Модальное окно подтверждения */
+.modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -104,10 +144,10 @@
   align-items: center;
   justify-content: center;
   z-index: 10001;
-  animation: confirmFadeIn 0.2s ease;
+  animation: fadeIn 0.2s ease;
 }
 
-.confirm-dialog {
+.modal-content {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -115,10 +155,10 @@
   max-width: 500px;
   width: 90%;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-  animation: confirmSlideIn 0.3s ease;
+  animation: modalSlideIn 0.3s ease;
 }
 
-.confirm-header {
+.modal-header {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -126,17 +166,22 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.confirm-icon { font-size: 20px; }
-.confirm-icon.warning { color: var(--warning); }
+.modal-icon {
+  font-size: 20px;
+}
 
-.confirm-header h3 {
+.modal-icon.warning {
+  color: var(--warning);
+}
+
+.modal-header h3 {
   flex: 1;
   color: var(--text-primary);
   font-size: 18px;
   margin: 0;
 }
 
-.confirm-close-btn {
+.modal-close {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -149,12 +194,12 @@
   transition: var(--transition);
 }
 
-.confirm-close-btn:hover {
+.modal-close:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.confirm-body {
+.modal-body {
   padding: 20px;
   color: var(--text-secondary);
   font-size: 15px;
@@ -162,7 +207,7 @@
   white-space: pre-wrap;
 }
 
-.confirm-footer {
+.modal-footer {
   display: flex;
   gap: 10px;
   padding: 16px 20px;
@@ -170,7 +215,7 @@
   justify-content: flex-end;
 }
 
-.confirm-btn {
+.modal-btn {
   padding: 8px 20px;
   border: none;
   border-radius: var(--border-radius-sm);
@@ -180,41 +225,72 @@
   transition: var(--transition);
 }
 
-.confirm-btn.cancel {
+.modal-btn.cancel {
   background: var(--bg-tertiary);
   color: var(--text-secondary);
 }
-.confirm-btn.cancel:hover {
+
+.modal-btn.cancel:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.confirm-btn.confirm {
+.modal-btn.confirm {
   background: var(--danger);
   color: white;
 }
-.confirm-btn.confirm:hover {
+
+.modal-btn.confirm:hover {
   background: var(--danger-hover);
 }
 
 /* Анимации */
-@keyframes notifSlideIn {
-  from { opacity: 0; transform: translateX(50px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-@keyframes confirmFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-@keyframes confirmSlideIn {
-  from { opacity: 0; transform: translateY(-50px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
+/* Адаптивность */
 @media (max-width: 768px) {
-  .notifications-container { left: 20px; right: 20px; }
-  .notification { min-width: auto; max-width: none; }
-  .confirm-dialog { min-width: auto; width: 90%; margin: 20px; }
+  .notifications-container {
+    left: 20px;
+    right: 20px;
+  }
+  
+  .notification {
+    min-width: auto;
+    max-width: none;
+  }
+  
+  .modal-content {
+    min-width: auto;
+    width: 90%;
+    margin: 20px;
+  }
 }
