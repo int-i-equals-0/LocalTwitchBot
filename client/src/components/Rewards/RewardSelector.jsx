@@ -1,4 +1,5 @@
 // client/src/components/Rewards/RewardSelector.jsx
+
 import { useState } from 'react';
 import { FaPlus, FaSync, FaArrowRight } from 'react-icons/fa';
 import './RewardsTab.css';

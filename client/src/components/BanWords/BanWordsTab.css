@@ -178,7 +178,6 @@
   background: var(--danger-hover);
 }
 
-/* Aliases expansion panel (unique to BanWords) */
 .banwords-tab .aliases-list {
   padding: 16px 20px;
   background: var(--bg-tertiary);

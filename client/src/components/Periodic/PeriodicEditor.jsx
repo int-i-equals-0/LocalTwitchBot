@@ -1,4 +1,5 @@
 // client/src/components/Periodic/PeriodicEditor.jsx
+
 import { useState } from 'react';
 import { FaSave, FaPlus, FaPowerOff } from 'react-icons/fa';
 import ResponseEditor from '../Common/ResponseEditor';

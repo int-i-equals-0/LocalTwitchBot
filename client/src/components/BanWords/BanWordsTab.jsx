@@ -1,7 +1,8 @@
 // client/src/components/BanWords/BanWordsTab.jsx
+
 import { useState } from 'react';
 import { FaTrash, FaPlus, FaEye, FaEyeSlash, FaCopy } from 'react-icons/fa';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './BanWordsTab.css';
 
 function generateAliases(word) {

@@ -24,10 +24,28 @@ function EventEditor({ eventType, config, meta, onUpdate, overlays = [] }) {
     });
   };
 
+  const getEventTitle = () => {
+    switch(eventType) {
+      case 'follow':
+        return 'Новый фолловер';
+      case 'subscribe':
+        return 'Новый подписчик';
+      case 'resubscribe':
+        return 'Продление подписки';
+      case 'giftSub':
+        return 'Подарочная подписка';
+      case 'raid':
+        return 'Рейд';
+      default:
+        return meta.name || eventType;
+    }
+  };
+
   return (
     <div className="event-editor">
       <div className="event-editor-header">
         <div className="event-meta">
+          <h2>{getEventTitle()}</h2>
           <p className="event-description">{meta.description}</p>
           <div className="event-vars">
             <span className="vars-label">Доступные переменные:</span>

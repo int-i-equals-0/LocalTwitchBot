@@ -1,9 +1,12 @@
 // client/src/components/Logs/LogsTab.jsx
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FaTrash, FaPause, FaPlay, FaDownload, FaFilter, FaSearch } from 'react-icons/fa';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './LogsTab.css';
 
 function LogsTab() {
+  const { showNotification } = useNotification();
   const [logs, setLogs] = useState([]);
   const [filter, setFilter] = useState('');
   const [paused, setPaused] = useState(false);
@@ -15,7 +18,6 @@ function LogsTab() {
   const pausedRef = useRef(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
-  // Синхронизируем ref с state
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
@@ -30,6 +32,69 @@ function LogsTab() {
     if (message.includes('🚫') || message.includes('Ban') || message.includes('Бан')) return 'log-ban';
     return 'log-info';
   };
+
+  const connectWebSocket = useCallback(function connectWebSocket() {
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
+      return;
+    }
+
+    try {
+      wsRef.current = new WebSocket('ws://localhost:8081');
+
+      wsRef.current.onopen = () => {
+        setConnectionStatus('connected');
+        showNotification('🔌 WebSocket подключен к серверу логов', NOTIFICATION_TYPES.SUCCESS, 2000);
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
+      };
+
+      wsRef.current.onmessage = (event) => {
+        if (!pausedRef.current) {
+          try {
+            const logData = JSON.parse(event.data);
+            setLogs(prev => {
+              const newLog = {
+                timestamp: logData.timestamp,
+                message: logData.message,
+                timeStr: new Date(logData.timestamp).toLocaleTimeString()
+              };
+
+              if (prev.length > 0 && prev[prev.length - 1].message === newLog.message) {
+                return prev;
+              }
+
+              return [...prev, newLog].slice(-1000);
+            });
+          } catch (e) {
+            console.error('Ошибка парсинга лога:', e);
+            showNotification('⚠️ Ошибка парсинга лога', NOTIFICATION_TYPES.WARNING, 3000);
+          }
+        }
+      };
+
+      wsRef.current.onerror = () => {
+        setConnectionStatus('error');
+        showNotification('❌ Ошибка WebSocket соединения', NOTIFICATION_TYPES.ERROR, 3000);
+      };
+
+      wsRef.current.onclose = () => {
+        setConnectionStatus('disconnected');
+        showNotification('🔌 WebSocket отключен, попытка переподключения...', NOTIFICATION_TYPES.WARNING, 3000);
+        if (!reconnectTimerRef.current) {
+          reconnectTimerRef.current = setTimeout(() => {
+            reconnectTimerRef.current = null;
+            connectWebSocket();
+          }, 3000);
+        }
+      };
+    } catch (error) {
+      console.error('Ошибка подключения к логам:', error);
+      setConnectionStatus('error');
+      showNotification('❌ Ошибка подключения к серверу логов', NOTIFICATION_TYPES.ERROR, 3000);
+    }
+  }, [showNotification]);
 
   const filteredLogs = logs.filter(log => {
     const message = log.message || log;
@@ -57,78 +122,45 @@ function LogsTab() {
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     };
-  }, []);
-
-  const connectWebSocket = useCallback(() => {
-    if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
-      return;
-    }
-
-    try {
-      wsRef.current = new WebSocket('ws://localhost:8081');
-
-      wsRef.current.onopen = () => {
-        setConnectionStatus('connected');
-        if (reconnectTimerRef.current) {
-          clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = null;
-        }
-      };
-
-      wsRef.current.onmessage = (event) => {
-        // Читаем из ref, а не из замыкания state
-        if (!pausedRef.current) {
-          try {
-            const logData = JSON.parse(event.data);
-            setLogs(prev => {
-              const newLog = {
-                timestamp: logData.timestamp,
-                message: logData.message,
-                timeStr: new Date(logData.timestamp).toLocaleTimeString()
-              };
-
-              if (prev.length > 0 && prev[prev.length - 1].message === newLog.message) {
-                return prev;
-              }
-
-              return [...prev, newLog].slice(-1000);
-            });
-          } catch (e) {
-            console.error('Ошибка парсинга лога:', e);
-          }
-        }
-      };
-
-      wsRef.current.onerror = () => {
-        setConnectionStatus('error');
-      };
-
-      wsRef.current.onclose = () => {
-        setConnectionStatus('disconnected');
-        if (!reconnectTimerRef.current) {
-          reconnectTimerRef.current = setTimeout(() => {
-            reconnectTimerRef.current = null;
-            connectWebSocket();
-          }, 3000);
-        }
-      };
-    } catch (error) {
-      console.error('Ошибка подключения к логам:', error);
-      setConnectionStatus('error');
-    }
-  }, []);
-
-  const clearLogs = () => setLogs([]);
+  }, [connectWebSocket]);
+  
+  const clearLogs = () => {
+    setLogs([]);
+    showNotification('🗑️ Логи очищены', NOTIFICATION_TYPES.INFO, 1500);
+  };
 
   const exportLogs = () => {
+    if (logs.length === 0) {
+      showNotification('📭 Нет логов для экспорта', NOTIFICATION_TYPES.WARNING, 2000);
+      return;
+    }
+    
     const logText = logs.map(log => `[${log.timeStr}] ${log.message}`).join('\n');
     const blob = new Blob([logText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `bot-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+    const fileName = `bot-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
+    showNotification(`📥 Логи экспортированы (${logs.length} записей)`, NOTIFICATION_TYPES.SUCCESS, 2000);
+  };
+
+  const clearFilter = () => {
+    setFilter('');
+    showNotification('🔍 Фильтр очищен', NOTIFICATION_TYPES.INFO, 1000);
+  };
+
+  const changeLogLevel = (level) => {
+    setLogLevel(level);
+    const levelNames = {
+      all: 'все уровни',
+      info: 'информационные',
+      warning: 'предупреждения',
+      error: 'ошибки'
+    };
+    showNotification(`📊 Показываются ${levelNames[level]}`, NOTIFICATION_TYPES.INFO, 1000);
   };
 
   const getConnectionText = () => {
@@ -163,13 +195,17 @@ function LogsTab() {
             className="filter-input"
           />
           {filter && (
-            <button className="search-clear" onClick={() => setFilter('')}>✕</button>
+            <button className="search-clear" onClick={clearFilter}>✕</button>
           )}
         </div>
 
         <div className="filter-group">
           <FaFilter className="filter-icon" />
-          <select value={logLevel} onChange={(e) => setLogLevel(e.target.value)} className="level-select">
+          <select 
+            value={logLevel} 
+            onChange={(e) => changeLogLevel(e.target.value)} 
+            className="level-select"
+          >
             <option value="all">Все уровни</option>
             <option value="info">ℹ️ Инфо</option>
             <option value="warning">⚠️ Предупреждения</option>
@@ -179,7 +215,14 @@ function LogsTab() {
 
         <div className="control-buttons">
           <button
-            onClick={() => setAutoScroll(!autoScroll)}
+            onClick={() => {
+              setAutoScroll(!autoScroll);
+              showNotification(
+                autoScroll ? '⏸️ Автоскролл выключен' : '▶️ Автоскролл включен',
+                NOTIFICATION_TYPES.INFO,
+                1000
+              );
+            }}
             className={`control-btn ${autoScroll ? 'active' : ''}`}
             title={autoScroll ? 'Автоскролл вкл' : 'Автоскролл выкл'}
           >
@@ -187,7 +230,14 @@ function LogsTab() {
           </button>
 
           <button
-            onClick={() => setPaused(!paused)}
+            onClick={() => {
+              setPaused(!paused);
+              showNotification(
+                paused ? '▶️ Приём логов возобновлён' : '⏸️ Приём логов приостановлен',
+                NOTIFICATION_TYPES.INFO,
+                1500
+              );
+            }}
             className={`control-btn ${paused ? 'paused' : ''}`}
             title={paused ? 'Возобновить' : 'Пауза'}
           >
@@ -210,7 +260,7 @@ function LogsTab() {
             ) : (
               <>
                 <p>🔍 Нет логов, соответствующих фильтру</p>
-                <button onClick={() => setFilter('')} className="clear-filter-btn">Очистить фильтр</button>
+                <button onClick={clearFilter} className="clear-filter-btn">Очистить фильтр</button>
               </>
             )}
           </div>

@@ -1,8 +1,8 @@
 // client/src/App.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Layout/Sidebar';
 import MainContent from './components/Layout/MainContent';
-import { NotificationProvider, useNotification, NOTIFICATION_TYPES } from './components/Notification/Notification';
+import { NotificationProvider, useNotification, NOTIFICATION_TYPES } from './components/Notification';
 import './App.css';
 
 const TABS = {
@@ -22,7 +22,6 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState(TABS.OAUTH);
   const [loading, setLoading] = useState(true);
   
-  // Все состояния конфига
   const [tokens, setTokens] = useState({});
   const [commands, setCommands] = useState({});
   const [rewards, setRewards] = useState({});
@@ -33,11 +32,7 @@ function AppContent() {
   const [overlays, setOverlays] = useState([]);
   const [configVersion, setConfigVersion] = useState(0);
 
-  useEffect(() => {
-    loadFullConfig();
-  }, []);
-
-  const loadFullConfig = async () => {
+  const loadFullConfig = useCallback(async () => {
     try {
       const response = await fetch('http://127.0.0.1:3001/api/config');
       const data = await response.json();
@@ -58,7 +53,11 @@ function AppContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
+
+  useEffect(() => {
+    loadFullConfig();
+  }, [loadFullConfig]);
 
   const saveFullConfig = async () => {
     try {

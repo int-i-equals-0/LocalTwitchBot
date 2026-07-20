@@ -1,4 +1,5 @@
 /* client/src/components/Layout/Sidebar.css */
+
 .sidebar {
   width: var(--sidebar-width);
   background: var(--bg-secondary);

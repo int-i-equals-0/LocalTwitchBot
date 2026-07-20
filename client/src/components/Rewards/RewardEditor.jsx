@@ -1,26 +1,35 @@
 // client/src/components/Rewards/RewardEditor.jsx
-import { useState } from 'react';
-import { FaSave, FaPlus } from 'react-icons/fa';
-import ResponseEditor from '../Common/ResponseEditor';
-import './RewardsTab.css';
+
+import { useState } from "react";
+import { FaSave, FaPlus } from "react-icons/fa";
+import ResponseEditor from "../Common/ResponseEditor";
+import "./RewardsTab.css";
 
 function RewardEditor({ reward, onUpdate, overlays = [], isNew = false }) {
-  const [response, setResponse] = useState(reward.response || {
-    chat: { enabled: false, components: [] },
-    media: {
-      enabled: false,
-      file: '',
-      volume: 100,
-      overlay: null,
-      text: { enabled: false, content: '', position: 'overlay', animation: 'none', font: {} },
-      animation: { enter: 'none', exit: 'none' }
-    }
-  });
+  const [response, setResponse] = useState(
+    reward.response || {
+      chat: { enabled: false, components: [] },
+      media: {
+        enabled: false,
+        file: "",
+        volume: 100,
+        overlay: null,
+        text: {
+          enabled: false,
+          content: "",
+          position: "overlay",
+          animation: "none",
+          font: {},
+        },
+        animation: { enter: "none", exit: "none" },
+      },
+    },
+  );
 
   const handleSave = () => {
     onUpdate({
       ...reward,
-      response
+      response,
     });
   };
 
@@ -32,7 +41,8 @@ function RewardEditor({ reward, onUpdate, overlays = [], isNew = false }) {
           <code className="reward-id-value">{reward.rewardId}</code>
         </div>
         <p className="reward-vars-hint">
-          💡 Доступные переменные: {'{user}'} — имя пользователя, {'{message}'} — введённый текст
+          💡 Доступные переменные: {"{user}"} — имя пользователя, {"{message}"}{" "}
+          — введённый текст
         </p>
       </div>
 
@@ -45,7 +55,15 @@ function RewardEditor({ reward, onUpdate, overlays = [], isNew = false }) {
 
       <div className="reward-editor-actions">
         <button onClick={handleSave} className="save-reward-btn primary">
-          {isNew ? <><FaPlus /> Создать реакцию</> : <><FaSave /> Сохранить реакцию</>}
+          {isNew ? (
+            <>
+              <FaPlus /> Создать реакцию
+            </>
+          ) : (
+            <>
+              <FaSave /> Сохранить реакцию
+            </>
+          )}
         </button>
       </div>
     </div>

@@ -1,9 +1,9 @@
 // client/src/components/Events/EventsTab.jsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { FaPowerOff, FaEdit, FaPlay } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import EventEditor from './EventEditor';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './EventsTab.css';
 
 const EVENT_TYPES = {
@@ -58,7 +58,7 @@ function EventsTab({ events, onUpdate, overlays = [] }) {
       if (data.success) {
         showNotification(`✅ Тестовое событие "${EVENT_TYPES[eventType].label}" отправлено`, NOTIFICATION_TYPES.SUCCESS, 2000);
       }
-    } catch (e) { 
+    } catch { 
       showNotification('❌ Ошибка отправки тестового события', NOTIFICATION_TYPES.ERROR, 3000); 
     }
   };

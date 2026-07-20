@@ -1,9 +1,10 @@
 // client/src/components/Periodic/PeriodicTab.jsx
+
 import { useState } from 'react';
 import { FaPlus, FaTrash, FaPowerOff, FaEdit, FaPlay } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import PeriodicEditor from './PeriodicEditor';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './PeriodicTab.css';
 
 function PeriodicTab({ events, onUpdate, overlays = [] }) {
@@ -116,7 +117,7 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
       } else {
         showNotification(`❌ Ошибка: ${data.error}`, NOTIFICATION_TYPES.ERROR, 3000);
       }
-    } catch (error) {
+    } catch {
       showNotification('❌ Ошибка подключения к серверу', NOTIFICATION_TYPES.ERROR, 3000);
     }
   };
@@ -130,7 +131,7 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
       if (data.success) {
         showNotification('🔄 Таймеры перезапущены', NOTIFICATION_TYPES.SUCCESS, 2000);
       }
-    } catch (error) {
+    } catch {
       showNotification('❌ Ошибка перезапуска таймеров', NOTIFICATION_TYPES.ERROR, 3000);
     }
   };
@@ -257,7 +258,6 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
         })}
       </div>
 
-      {/* Единое модальное окно для создания и редактирования */}
       <Modal
         isOpen={!!editingEvent}
         onClose={() => setEditingEvent(null)}

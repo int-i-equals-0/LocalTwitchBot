@@ -1,6 +1,7 @@
 // client/src/components/ConfigControls.jsx
+
 import { FaSave, FaFolderOpen } from 'react-icons/fa';
-import { useNotification, NOTIFICATION_TYPES } from './Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from './Notification';
 import './ConfigControls.css';
 
 function ConfigControls({ onSave, onLoad }) {
@@ -13,7 +14,7 @@ function ConfigControls({ onSave, onLoad }) {
     }
     try {
       await onSave();
-    } catch (error) {
+    } catch {
       showNotification('❌ Ошибка при сохранении конфига', NOTIFICATION_TYPES.ERROR, 3000);
     }
   };
@@ -31,7 +32,7 @@ function ConfigControls({ onSave, onLoad }) {
           } else {
             showNotification('❌ Функция загрузки не передана', NOTIFICATION_TYPES.ERROR, 3000);
           }
-        } catch (error) {
+        } catch {
           showNotification('❌ Ошибка загрузки файла: неверный формат JSON', NOTIFICATION_TYPES.ERROR, 3000);
         }
       };

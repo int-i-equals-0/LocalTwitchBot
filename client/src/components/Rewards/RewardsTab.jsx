@@ -1,10 +1,11 @@
 // client/src/components/Rewards/RewardsTab.jsx
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { FaPlus, FaTrash, FaPowerOff, FaEdit, FaSync } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import RewardEditor from './RewardEditor';
 import RewardSelector from './RewardSelector';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './RewardsTab.css';
 
 function RewardsTab({ rewards, onUpdate, overlays = [] }) {
@@ -14,14 +15,7 @@ function RewardsTab({ rewards, onUpdate, overlays = [] }) {
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [eventSubStatus, setEventSubStatus] = useState({ connected: false, subscriptions: 0 });
 
-  useEffect(() => {
-    fetchChannelRewards();
-    fetchEventSubStatus();
-    const interval = setInterval(fetchEventSubStatus, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchChannelRewards = async () => {
+  const fetchChannelRewards = useCallback(async () => {
     setLoadingRewards(true);
     try {
       const response = await fetch('http://127.0.0.1:3001/api/rewards/channel');
@@ -31,27 +25,36 @@ function RewardsTab({ rewards, onUpdate, overlays = [] }) {
       } else {
         showNotification(`⚠️ ${data.error || 'Не удалось загрузить награды'}`, NOTIFICATION_TYPES.WARNING, 3000);
       }
-    } catch (error) {
+    } catch {
       showNotification('❌ Ошибка подключения к серверу', NOTIFICATION_TYPES.ERROR, 3000);
     } finally {
       setLoadingRewards(false);
     }
-  };
+  }, [showNotification]);
 
-  const fetchEventSubStatus = async () => {
+  const fetchEventSubStatus = useCallback(async () => {
     try {
       const response = await fetch('http://127.0.0.1:3001/api/eventsub/status');
       const data = await response.json();
       setEventSubStatus(data);
-    } catch (e) {}
-  };
+    } catch {
+      setEventSubStatus({ connected: false, subscriptions: 0 });
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChannelRewards();
+    fetchEventSubStatus();
+    const interval = setInterval(fetchEventSubStatus, 10000);
+    return () => clearInterval(interval);
+  }, [fetchChannelRewards, fetchEventSubStatus]);
 
   const reconnectEventSub = async () => {
     try {
       await fetch('http://127.0.0.1:3001/api/eventsub/reconnect', { method: 'POST' });
       showNotification('🔄 EventSub переподключается...', NOTIFICATION_TYPES.INFO, 2000);
       setTimeout(fetchEventSubStatus, 3000);
-    } catch (e) {
+    } catch {
       showNotification('❌ Ошибка переподключения', NOTIFICATION_TYPES.ERROR, 3000);
     }
   };
@@ -240,7 +243,6 @@ function RewardsTab({ rewards, onUpdate, overlays = [] }) {
         </button>
       </div>
 
-      {/* Единое модальное окно */}
       <Modal
         isOpen={!!editingReward}
         onClose={() => setEditingReward(null)}

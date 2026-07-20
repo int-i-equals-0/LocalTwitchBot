@@ -1,8 +1,6 @@
-// utils/wordAliases.js - исправленный для ES6 модулей
+// utils/wordAliases.js
 
-// Словарь подмены символов (русский -> похожие латинские/цифры)
 const CHAR_MAP = {
-    // Русские буквы, похожие на английские
     'а': ['a'],
     'б': ['6'],
     'в': ['b'],
@@ -19,7 +17,6 @@ const CHAR_MAP = {
     'х': ['x'],
     'ь': ['b'],
 
-    // Латинские -> русские (только визуально идентичные)
     'a': ['а'],
     'b': ['в', 'ь'],
     'c': ['с'],
@@ -35,17 +32,14 @@ const CHAR_MAP = {
     'y': ['у']
 };
 
-// Генерируем все возможные комбинации замен
 export function generateAliases(word) {
   if (!word) return [];
   
   const original = word.toLowerCase();
-  const aliases = new Set([original]); // Set для автоматического удаления дубликатов
+  const aliases = new Set([original]);
   
-  // Разбиваем слово на символы
   const chars = original.split('');
   
-  // Находим все позиции, где возможна замена
   const replaceablePositions = [];
   chars.forEach((char, index) => {
     if (CHAR_MAP[char]) {
@@ -61,7 +55,6 @@ export function generateAliases(word) {
     return Array.from(aliases);
   }
   
-  // Генерируем все комбинации замен
   function generateCombinations(current, position) {
     if (position === replaceablePositions.length) {
       aliases.add(current.join(''));
@@ -70,10 +63,8 @@ export function generateAliases(word) {
     
     const pos = replaceablePositions[position];
     
-    // Вариант с оригинальным символом
     generateCombinations([...current], position + 1);
     
-    // Варианты с заменами
     for (const replacement of pos.replacements) {
       const newCurrent = [...current];
       newCurrent[pos.index] = replacement;
@@ -86,7 +77,6 @@ export function generateAliases(word) {
   return Array.from(aliases);
 }
 
-// Функция для создания объекта банворда с алиасами
 export function createBanWord(word, type) {
   const aliases = generateAliases(word);
   
@@ -98,5 +88,4 @@ export function createBanWord(word, type) {
   };
 }
 
-// Также можно экспортировать словарь, если нужно где-то ещё
 export { CHAR_MAP };

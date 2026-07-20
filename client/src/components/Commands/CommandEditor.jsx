@@ -1,4 +1,5 @@
 // client/src/components/Commands/CommandEditor.jsx
+
 import { useState } from 'react';
 import { FaSave, FaPlus } from 'react-icons/fa';
 import PermissionsSelector from './PermissionsSelector';

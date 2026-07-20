@@ -1,7 +1,8 @@
 // client/src/components/Common/AliasEditor.jsx
+
 import { useState } from 'react';
 import { FaPlus, FaTrash } from 'react-icons/fa';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './ResponseEditor.css';
 
 function AliasEditor({ value = [], onChange, allCommands = {}, currentCommandName }) {

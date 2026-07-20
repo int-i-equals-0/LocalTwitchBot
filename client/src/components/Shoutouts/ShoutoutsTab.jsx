@@ -1,8 +1,9 @@
 // client/src/components/Shoutouts/ShoutoutsTab.jsx
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { FaPlus, FaTrash, FaSync, FaBullhorn } from 'react-icons/fa';
 import Tooltip from '../Tooltip';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './ShoutoutsTab.css';
 
 function ShoutoutsTab({ autoshoutout, onUpdate }) {
@@ -11,19 +12,21 @@ function ShoutoutsTab({ autoshoutout, onUpdate }) {
   const [shoutoutStatus, setShoutoutStatus] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadShoutoutStatus();
-    const interval = setInterval(loadShoutoutStatus, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadShoutoutStatus = async () => {
+  const loadShoutoutStatus = useCallback(async () => {
     try {
       const resp = await fetch('http://127.0.0.1:3001/api/shoutout/status');
       const data = await resp.json();
       if (data.success) setShoutoutStatus(data);
-    } catch (e) {}
-  };
+    } catch {
+      showNotification('❌ Не удалось загрузить статус шаутов', NOTIFICATION_TYPES.ERROR, 3000);
+    }
+  }, [showNotification]);
+
+  useEffect(() => {
+    loadShoutoutStatus();
+    const interval = setInterval(loadShoutoutStatus, 5000);
+    return () => clearInterval(interval);
+  }, [loadShoutoutStatus]);
 
   const addShoutoutUser = () => {
     const name = newUser.trim().toLowerCase();
@@ -52,7 +55,7 @@ function ShoutoutsTab({ autoshoutout, onUpdate }) {
       await fetch('http://127.0.0.1:3001/api/shoutout/reset', { method: 'POST' });
       showNotification('🔄 Список выполненных шаутов сброшен', NOTIFICATION_TYPES.SUCCESS, 2000);
       loadShoutoutStatus();
-    } catch (e) { 
+    } catch { 
       showNotification('❌ Ошибка сброса', NOTIFICATION_TYPES.ERROR, 3000); 
     }
   };
@@ -67,7 +70,7 @@ function ShoutoutsTab({ autoshoutout, onUpdate }) {
       });
       showNotification(`📢 Шаут для ${username} добавлен в очередь`, NOTIFICATION_TYPES.SUCCESS, 2000);
       loadShoutoutStatus();
-    } catch (e) { 
+    } catch { 
       showNotification('❌ Ошибка', NOTIFICATION_TYPES.ERROR, 3000); 
     } finally {
       setLoading(false);

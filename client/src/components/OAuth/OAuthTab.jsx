@@ -1,8 +1,9 @@
 // client/src/components/OAuth/OAuthTab.jsx
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FaSignOutAlt, FaCheckCircle, FaExclamationTriangle, FaSync } from 'react-icons/fa';
 import Tooltip from '../Tooltip';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './OAuthTab.css';
 
 function OAuthTab({ tokens, onUpdate }) {
@@ -11,18 +12,22 @@ function OAuthTab({ tokens, onUpdate }) {
   const [botInfo, setBotInfo] = useState(null);
   const [loading, setLoading] = useState({ broadcaster: false, bot: false });
   const [refreshing, setRefreshing] = useState({ broadcaster: false, bot: false });
+  const [initialLoadComplete, setInitialLoadComplete] = useState({ broadcaster: false, bot: false });
+  
+  const isFirstRender = useRef(true);
+  const hasShownNotification = useRef({ broadcaster: false, bot: false });
 
-  useEffect(() => {
-    if (tokens.broadcasterAccessToken) {
-      fetchUserInfo('broadcaster', tokens.broadcasterAccessToken);
+  const fetchUserInfo = useCallback(async (type, token, isInitial = false) => {
+    if (!token) {
+      if (type === 'broadcaster') {
+        setBroadcasterInfo(null);
+        setInitialLoadComplete(prev => ({ ...prev, broadcaster: true }));
+      } else {
+        setBotInfo(null);
+        setInitialLoadComplete(prev => ({ ...prev, bot: true }));
+      }
+      return;
     }
-    if (tokens.accessToken) {
-      fetchUserInfo('bot', tokens.accessToken);
-    }
-  }, [tokens.broadcasterAccessToken, tokens.accessToken]);
-
-  const fetchUserInfo = async (type, token) => {
-    if (!token) return;
     
     setLoading(prev => ({ ...prev, [type]: true }));
     
@@ -51,9 +56,27 @@ function OAuthTab({ tokens, onUpdate }) {
             onUpdate({ ...tokens, botUsername: userInfo.login });
           }
         }
+        
+        if (!isInitial && !hasShownNotification.current[type]) {
+          showNotification(
+            `✅ ${type === 'broadcaster' ? 'Стример' : 'Бот'} авторизован: ${userInfo.login}`,
+            NOTIFICATION_TYPES.SUCCESS,
+            3000
+          );
+          hasShownNotification.current[type] = true;
+        }
       } else {
         if (type === 'broadcaster') setBroadcasterInfo(null);
         else setBotInfo(null);
+        
+        if (!isInitial && !hasShownNotification.current[type]) {
+          showNotification(
+            `⚠️ Токен ${type === 'broadcaster' ? 'стримера' : 'бота'} невалиден, требуется повторная авторизация`,
+            NOTIFICATION_TYPES.WARNING,
+            5000
+          );
+          hasShownNotification.current[type] = true;
+        }
       }
     } catch (error) {
       console.error(`Ошибка получения информации о ${type}:`, error);
@@ -61,64 +84,187 @@ function OAuthTab({ tokens, onUpdate }) {
       else setBotInfo(null);
     } finally {
       setLoading(prev => ({ ...prev, [type]: false }));
+      setInitialLoadComplete(prev => ({ ...prev, [type]: true }));
     }
-  };
+  }, [tokens, onUpdate, showNotification]);
+
+  useEffect(() => {
+    if (tokens.broadcasterAccessToken) {
+      fetchUserInfo('broadcaster', tokens.broadcasterAccessToken, isFirstRender.current);
+    } else {
+      setBroadcasterInfo(null);
+      setInitialLoadComplete(prev => ({ ...prev, broadcaster: true }));
+    }
+    
+    if (tokens.accessToken) {
+      fetchUserInfo('bot', tokens.accessToken, isFirstRender.current);
+    } else {
+      setBotInfo(null);
+      setInitialLoadComplete(prev => ({ ...prev, bot: true }));
+    }
+    
+    if (isFirstRender.current) {
+      setTimeout(() => {
+        isFirstRender.current = false;
+      }, 500);
+    }
+  }, [tokens.broadcasterAccessToken, tokens.accessToken, fetchUserInfo]);
+
+  useEffect(() => {
+    hasShownNotification.current = { broadcaster: false, bot: false };
+  }, [tokens.broadcasterAccessToken, tokens.accessToken]);
 
   const authorizeBroadcaster = async () => {
+    showNotification(
+      '🔐 Открывается окно авторизации стримера...',
+      NOTIFICATION_TYPES.INFO,
+      2000
+    );
+    
     try {
       const response = await fetch('http://127.0.0.1:3001/api/auth/twitch/broadcaster');
       const data = await response.json();
+      
       if (data.url) {
         const authWindow = window.open(data.url, 'twitch-auth', 'width=800,height=600');
         
-        const checkClosed = setInterval(async () => {
+        if (!authWindow) {
+          showNotification(
+            '❌ Браузер заблокировал всплывающее окно. Разрешите всплывающие окна для этого сайта.',
+            NOTIFICATION_TYPES.ERROR,
+            5000
+          );
+          return;
+        }
+        
+        showNotification(
+          '🔄 Ожидайте завершения авторизации в открывшемся окне...',
+          NOTIFICATION_TYPES.INFO,
+          3000
+        );
+        
+        const checkClosed = setInterval(() => {
           if (authWindow.closed) {
             clearInterval(checkClosed);
+            showNotification(
+              '🔄 Авторизация завершена, обновление данных...',
+              NOTIFICATION_TYPES.INFO,
+              2000
+            );
             window.location.reload();
           }
         }, 500);
+      } else {
+        showNotification(
+          '❌ Не удалось получить URL авторизации',
+          NOTIFICATION_TYPES.ERROR,
+          3000
+        );
       }
     } catch (error) {
       console.error('Ошибка:', error);
-      showNotification('❌ Ошибка при открытии окна авторизации', NOTIFICATION_TYPES.ERROR, 3000);
+      showNotification(
+        '❌ Ошибка при открытии окна авторизации. Проверьте подключение к серверу.',
+        NOTIFICATION_TYPES.ERROR,
+        5000
+      );
     }
   };
 
   const authorizeBot = async () => {
+    showNotification(
+      '🔐 Открывается окно авторизации бота...',
+      NOTIFICATION_TYPES.INFO,
+      2000
+    );
+    
     try {
       const response = await fetch('http://127.0.0.1:3001/api/auth/twitch/bot');
       const data = await response.json();
+      
       if (data.url) {
         const authWindow = window.open(data.url, 'twitch-auth', 'width=800,height=600');
         
-        const checkClosed = setInterval(async () => {
+        if (!authWindow) {
+          showNotification(
+            '❌ Браузер заблокировал всплывающее окно. Разрешите всплывающие окна для этого сайта.',
+            NOTIFICATION_TYPES.ERROR,
+            5000
+          );
+          return;
+        }
+        
+        showNotification(
+          '🔄 Ожидайте завершения авторизации в открывшемся окне...',
+          NOTIFICATION_TYPES.INFO,
+          3000
+        );
+        
+        const checkClosed = setInterval(() => {
           if (authWindow.closed) {
             clearInterval(checkClosed);
+            showNotification(
+              '🔄 Авторизация завершена, обновление данных...',
+              NOTIFICATION_TYPES.INFO,
+              2000
+            );
             window.location.reload();
           }
         }, 500);
+      } else {
+        showNotification(
+          '❌ Не удалось получить URL авторизации',
+          NOTIFICATION_TYPES.ERROR,
+          3000
+        );
       }
     } catch (error) {
       console.error('Ошибка:', error);
-      showNotification('❌ Ошибка при открытии окна авторизации', NOTIFICATION_TYPES.ERROR, 3000);
+      showNotification(
+        '❌ Ошибка при открытии окна авторизации. Проверьте подключение к серверу.',
+        NOTIFICATION_TYPES.ERROR,
+        5000
+      );
     }
   };
 
   const refreshToken = async (type) => {
+    const typeName = type === 'broadcaster' ? 'стримера' : 'бота';
     setRefreshing(prev => ({ ...prev, [type]: true }));
+    
+    showNotification(
+      `🔄 Обновление токена ${typeName}...`,
+      NOTIFICATION_TYPES.INFO,
+      1500
+    );
+    
     try {
       const response = await fetch(`http://127.0.0.1:3001/api/auth/refresh/${type}`, {
         method: 'POST'
       });
       const data = await response.json();
+      
       if (data.success) {
-        showNotification(`✅ Токен ${type === 'broadcaster' ? 'стримера' : 'бота'} обновлён`, NOTIFICATION_TYPES.SUCCESS, 2000);
+        showNotification(
+          `✅ Токен ${typeName} успешно обновлён. Страница будет перезагружена.`,
+          NOTIFICATION_TYPES.SUCCESS,
+          2000
+        );
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        showNotification(`❌ Ошибка обновления токена`, NOTIFICATION_TYPES.ERROR, 3000);
+        showNotification(
+          `❌ Ошибка обновления токена ${typeName}: ${data.error || 'неизвестная ошибка'}`,
+          NOTIFICATION_TYPES.ERROR,
+          4000
+        );
       }
     } catch (error) {
-      showNotification('❌ Ошибка подключения к серверу', NOTIFICATION_TYPES.ERROR, 3000);
+      console.error('Ошибка обновления токена:', error);
+      showNotification(
+        `❌ Ошибка подключения к серверу при обновлении токена ${typeName}`,
+        NOTIFICATION_TYPES.ERROR,
+        4000
+      );
     } finally {
       setRefreshing(prev => ({ ...prev, [type]: false }));
     }
@@ -128,13 +274,24 @@ function OAuthTab({ tokens, onUpdate }) {
     showConfirm(
       'Вы действительно хотите удалить авторизацию стримера?\n\nБот потеряет доступ к событиям (подписки, фолловеры, награды) до повторной авторизации.',
       async () => {
+        showNotification(
+          '🗑️ Удаление авторизации стримера...',
+          NOTIFICATION_TYPES.INFO,
+          1000
+        );
+        
         const updated = { ...tokens };
         delete updated.broadcasterAccessToken;
         delete updated.broadcasterRefreshToken;
         delete updated.channelName;
         onUpdate(updated);
         setBroadcasterInfo(null);
-        showNotification('🗑️ Авторизация стримера удалена. Перезапустите сервер.', NOTIFICATION_TYPES.WARNING, 4000);
+        
+        showNotification(
+          '🗑️ Авторизация стримера удалена. Перезапустите сервер для применения изменений.',
+          NOTIFICATION_TYPES.WARNING,
+          5000
+        );
       }
     );
   };
@@ -143,14 +300,102 @@ function OAuthTab({ tokens, onUpdate }) {
     showConfirm(
       'Вы действительно хотите удалить авторизацию бота?\n\nБот перестанет отвечать в чате до повторной авторизации.',
       async () => {
+        showNotification(
+          '🗑️ Удаление авторизации бота...',
+          NOTIFICATION_TYPES.INFO,
+          1000
+        );
+        
         const updated = { ...tokens };
         delete updated.accessToken;
         delete updated.refreshToken;
         delete updated.botUsername;
         onUpdate(updated);
         setBotInfo(null);
-        showNotification('🗑️ Авторизация бота удалена. Перезапустите сервер.', NOTIFICATION_TYPES.WARNING, 4000);
+        
+        showNotification(
+          '🗑️ Авторизация бота удалена. Перезапустите сервер для применения изменений.',
+          NOTIFICATION_TYPES.WARNING,
+          5000
+        );
       }
+    );
+  };
+
+  const getScopesDescription = (scopes) => {
+    if (!scopes) return 'нет';
+    const scopeMap = {
+      'channel:manage:redemptions': '🎁 награды',
+      'channel:read:redemptions': '👀 просмотр наград',
+      'chat:read': '📖 чтение чата',
+      'chat:edit': '✏️ отправка сообщений',
+      'moderator:manage:shoutouts': '📢 шауты',
+      'channel:manage:moderators': '🛡️ модерация',
+      'moderator:read:followers': '👥 фолловеры',
+      'channel:read:subscriptions': '📺 подписки',
+    };
+    
+    const found = scopes
+      .map(s => scopeMap[s])
+      .filter(Boolean);
+    
+    return found.length > 0 ? found.join(', ') : `${scopes.length} прав`;
+  };
+
+  const renderAuthStatus = (type, info, hasToken, loadingComplete) => {
+    if (loading[type] && !info) {
+      return (
+        <div className="oauth-auth-status loading">
+          <div className="loading-spinner" />
+          <div>
+            <strong>Проверка авторизации...</strong>
+            <div className="oauth-scopes">Загрузка информации</div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (info) {
+      return (
+        <div className="oauth-auth-status success">
+          <FaCheckCircle />
+          <div>
+            <strong>{info.login}</strong>
+            <div className="oauth-scopes">
+              Прав: {info.scopes?.length || 0}
+              {info.scopes?.length > 0 && (
+                <Tooltip text={getScopesDescription(info.scopes)} />
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (hasToken && loadingComplete) {
+      return (
+        <div className="oauth-auth-status error">
+          <FaExclamationTriangle />
+          <div>
+            <strong>Токен невалиден</strong>
+            <div className="oauth-scopes">Повторите авторизацию</div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (!hasToken && loadingComplete) {
+      return (
+        <div className="oauth-auth-status muted">
+          <div>Не авторизован</div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="oauth-auth-status muted">
+        <div>Проверка...</div>
+      </div>
     );
   };
 
@@ -164,7 +409,6 @@ function OAuthTab({ tokens, onUpdate }) {
       </div>
 
       <div className="oauth-two-columns">
-        {/* Стример */}
         <div className="oauth-card">
           <div className="oauth-card-header">
             <h3>🎥 Стример</h3>
@@ -172,48 +416,38 @@ function OAuthTab({ tokens, onUpdate }) {
           </div>
           
           <div className="oauth-card-content">
-            {broadcasterInfo ? (
-              <div className="oauth-auth-status success">
-                <FaCheckCircle />
-                <div>
-                  <strong>{broadcasterInfo.login}</strong>
-                  <div className="oauth-scopes">Прав: {broadcasterInfo.scopes?.length || 0}</div>
-                </div>
-              </div>
-            ) : tokens.broadcasterAccessToken ? (
-              <div className="oauth-auth-status error">
-                <FaExclamationTriangle />
-                <div>
-                  <strong>Токен невалиден</strong>
-                  <div className="oauth-scopes">Повторите авторизацию</div>
-                </div>
-              </div>
-            ) : (
-              <div className="oauth-auth-status muted">
-                <div>Не авторизован</div>
-              </div>
-            )}
-            
-            {loading.broadcaster && (
-              <div className="oauth-loading">Загрузка информации...</div>
+            {renderAuthStatus(
+              'broadcaster',
+              broadcasterInfo,
+              !!tokens.broadcasterAccessToken,
+              initialLoadComplete.broadcaster
             )}
             
             <div className="oauth-actions">
-              {!broadcasterInfo ? (
+              {!broadcasterInfo && initialLoadComplete.broadcaster ? (
                 <button onClick={authorizeBroadcaster} className="oauth-auth-btn">
                   🔐 Авторизоваться
                 </button>
-              ) : (
+              ) : broadcasterInfo ? (
                 <>
-                  <button onClick={() => refreshToken('broadcaster')} className="oauth-refresh-btn" disabled={refreshing.broadcaster}>
+                  <button 
+                    onClick={() => refreshToken('broadcaster')} 
+                    className="oauth-refresh-btn" 
+                    disabled={refreshing.broadcaster}
+                    title="Обновить токен, если он скоро истечёт"
+                  >
                     <FaSync className={refreshing.broadcaster ? 'spinning' : ''} />
                     Обновить токен
                   </button>
-                  <button onClick={logoutBroadcaster} className="oauth-logout-btn">
+                  <button 
+                    onClick={logoutBroadcaster} 
+                    className="oauth-logout-btn"
+                    title="Удалить авторизацию"
+                  >
                     <FaSignOutAlt /> Выйти
                   </button>
                 </>
-              )}
+              ) : null}
             </div>
             
             <div className="oauth-hint">
@@ -222,7 +456,6 @@ function OAuthTab({ tokens, onUpdate }) {
           </div>
         </div>
 
-        {/* Бот */}
         <div className="oauth-card">
           <div className="oauth-card-header">
             <h3>🤖 Бот</h3>
@@ -230,48 +463,38 @@ function OAuthTab({ tokens, onUpdate }) {
           </div>
           
           <div className="oauth-card-content">
-            {botInfo ? (
-              <div className="oauth-auth-status success">
-                <FaCheckCircle />
-                <div>
-                  <strong>{botInfo.login}</strong>
-                  <div className="oauth-scopes">Прав: {botInfo.scopes?.length || 0}</div>
-                </div>
-              </div>
-            ) : tokens.accessToken ? (
-              <div className="oauth-auth-status error">
-                <FaExclamationTriangle />
-                <div>
-                  <strong>Токен невалиден</strong>
-                  <div className="oauth-scopes">Повторите авторизацию</div>
-                </div>
-              </div>
-            ) : (
-              <div className="oauth-auth-status muted">
-                <div>Не авторизован</div>
-              </div>
-            )}
-            
-            {loading.bot && (
-              <div className="oauth-loading">Загрузка информации...</div>
+            {renderAuthStatus(
+              'bot',
+              botInfo,
+              !!tokens.accessToken,
+              initialLoadComplete.bot
             )}
             
             <div className="oauth-actions">
-              {!botInfo ? (
+              {!botInfo && initialLoadComplete.bot ? (
                 <button onClick={authorizeBot} className="oauth-auth-btn">
                   🔐 Авторизоваться
                 </button>
-              ) : (
+              ) : botInfo ? (
                 <>
-                  <button onClick={() => refreshToken('bot')} className="oauth-refresh-btn" disabled={refreshing.bot}>
+                  <button 
+                    onClick={() => refreshToken('bot')} 
+                    className="oauth-refresh-btn" 
+                    disabled={refreshing.bot}
+                    title="Обновить токен, если он скоро истечёт"
+                  >
                     <FaSync className={refreshing.bot ? 'spinning' : ''} />
                     Обновить токен
                   </button>
-                  <button onClick={logoutBot} className="oauth-logout-btn">
+                  <button 
+                    onClick={logoutBot} 
+                    className="oauth-logout-btn"
+                    title="Удалить авторизацию"
+                  >
                     <FaSignOutAlt /> Выйти
                   </button>
                 </>
-              )}
+              ) : null}
             </div>
             
             <div className="oauth-hint">
@@ -288,6 +511,7 @@ function OAuthTab({ tokens, onUpdate }) {
           <li>После авторизации обоих аккаунтов необходимо <strong>перезапустить сервер</strong></li>
           <li>Токены автоматически обновляются, но при длительном простое могут истечь</li>
           <li>Для работы наград за баллы требуется EventSub подключение (автоматически после авторизации стримера)</li>
+          <li>При проблемах с авторизацией проверьте, что всплывающие окна не блокируются браузером</li>
         </ul>
       </div>
     </div>

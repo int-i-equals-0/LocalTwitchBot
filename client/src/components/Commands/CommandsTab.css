@@ -45,7 +45,6 @@
   border: 1px solid var(--accent);
 }
 
-/* PermissionsSelector — уникальные стили */
 .permissions-selector {
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);

@@ -1,8 +1,9 @@
 // client/src/components/Overlays/OverlaysTab.jsx
+
 import { useState } from 'react';
 import { FaPlus, FaTrash, FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
 import Tooltip from '../Tooltip';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './OverlaysTab.css';
 
 function OverlaysTab({ overlays = [], onUpdate }) {

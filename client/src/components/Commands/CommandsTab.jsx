@@ -1,9 +1,10 @@
 // client/src/components/Commands/CommandsTab.jsx
+
 import { useState } from 'react';
 import { FaPlus, FaTrash, FaPowerOff, FaEdit } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import CommandEditor from './CommandEditor';
-import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
+import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './CommandsTab.css';
 
 function CommandsTab({ commands, onUpdate, overlays = [] }) {
@@ -38,7 +39,7 @@ function CommandsTab({ commands, onUpdate, overlays = [] }) {
     setEditingCommand({ key: null, config: getEmptyConfig(), isNew: true });
   };
 
-  const deleteCommand = (commandKey, commandName) => {
+  const deleteCommand = (commandKey) => {
     showConfirm(
       `Вы действительно хотите удалить команду ${commandKey}?\n\nЭто действие нельзя отменить.`,
       () => {
@@ -191,7 +192,7 @@ function CommandsTab({ commands, onUpdate, overlays = [] }) {
                     <FaEdit />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); deleteCommand(cmdKey, config.name || cmdKey); }}
+                    onClick={(e) => { e.stopPropagation(); deleteCommand(cmdKey); }}
                     className="delete-btn"
                     title="Удалить"
                   >
@@ -204,7 +205,6 @@ function CommandsTab({ commands, onUpdate, overlays = [] }) {
         })}
       </div>
 
-      {/* Единое модальное окно для создания и редактирования */}
       <Modal
         isOpen={!!editingCommand}
         onClose={() => setEditingCommand(null)}
