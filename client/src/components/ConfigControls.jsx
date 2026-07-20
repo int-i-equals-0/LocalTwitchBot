@@ -7,6 +7,10 @@ function ConfigControls({ onSave, onLoad }) {
   const { showNotification } = useNotification();
 
   const handleSave = async () => {
+    if (!onSave) {
+      showNotification('❌ Функция сохранения не передана', NOTIFICATION_TYPES.ERROR, 3000);
+      return;
+    }
     try {
       await onSave();
     } catch (error) {
@@ -21,14 +25,12 @@ function ConfigControls({ onSave, onLoad }) {
       reader.onload = (e) => {
         try {
           const config = JSON.parse(e.target.result);
-          
-          if (!config.tokens && !config.commands && !config.banwords) {
-            showNotification('❌ Неверный формат файла', NOTIFICATION_TYPES.ERROR, 3000);
-            return;
+          if (onLoad) {
+            onLoad(config);
+            showNotification('✅ Конфиг успешно загружен!', NOTIFICATION_TYPES.SUCCESS, 2000);
+          } else {
+            showNotification('❌ Функция загрузки не передана', NOTIFICATION_TYPES.ERROR, 3000);
           }
-          
-          onLoad(config);
-          showNotification('✅ Конфиг успешно загружен!', NOTIFICATION_TYPES.SUCCESS, 2000);
         } catch (error) {
           showNotification('❌ Ошибка загрузки файла: неверный формат JSON', NOTIFICATION_TYPES.ERROR, 3000);
         }
@@ -41,14 +43,14 @@ function ConfigControls({ onSave, onLoad }) {
   return (
     <div className="config-controls">
       <button onClick={handleSave} className="config-btn save">
-        <FaSave /> Сохранить конфиг
+        <FaSave /> Сохранить
       </button>
-      <button onClick={() => document.getElementById('file-input').click()} className="config-btn load">
-        <FaFolderOpen /> Загрузить конфиг
+      <button onClick={() => document.getElementById('config-file-input').click()} className="config-btn load">
+        <FaFolderOpen /> Загрузить
       </button>
       <input
         type="file"
-        id="file-input"
+        id="config-file-input"
         accept=".json"
         onChange={handleFileSelect}
         style={{ display: 'none' }}

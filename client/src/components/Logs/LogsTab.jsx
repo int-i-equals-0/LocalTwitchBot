@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { FaTrash, FaPause, FaPlay, FaDownload } from 'react-icons/fa';
+// client/src/components/Logs/LogsTab.jsx
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { FaTrash, FaPause, FaPlay, FaDownload, FaFilter, FaSearch } from 'react-icons/fa';
 import './LogsTab.css';
 
 function LogsTab() {
@@ -11,42 +12,36 @@ function LogsTab() {
   const logsEndRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  const pausedRef = useRef(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
+  // Синхронизируем ref с state
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
   const getLogClass = (log) => {
-    if (log.includes('❌') || log.includes('Error') || log.includes('Ошибка')) {
-      return 'log-error';
-    }
-    if (log.includes('⚠️') || log.includes('Warning') || log.includes('предупрежд')) {
-      return 'log-warning';
-    }
-    if (log.includes('✅') || log.includes('Success') || log.includes('успешно')) {
-      return 'log-success';
-    }
-    if (log.includes('📨') || log.includes('Command') || log.includes('Команда')) {
-      return 'log-command';
-    }
-    if (log.includes('🎬') || log.includes('Media') || log.includes('Медиа')) {
-      return 'log-media';
-    }
-    if (log.includes('🚫') || log.includes('Ban') || log.includes('Бан')) {
-      return 'log-ban';
-    }
+    const message = log.message || log;
+    if (message.includes('❌') || message.includes('Error') || message.includes('Ошибка')) return 'log-error';
+    if (message.includes('⚠️') || message.includes('Warning') || message.includes('предупрежд')) return 'log-warning';
+    if (message.includes('✅') || message.includes('Success') || message.includes('успешно')) return 'log-success';
+    if (message.includes('📨') || message.includes('Command') || message.includes('Команда')) return 'log-command';
+    if (message.includes('🎬') || message.includes('Media') || message.includes('Медиа')) return 'log-media';
+    if (message.includes('🚫') || message.includes('Ban') || message.includes('Бан')) return 'log-ban';
     return 'log-info';
   };
 
   const filteredLogs = logs.filter(log => {
-    if (filter && !log.toLowerCase().includes(filter.toLowerCase())) {
-      return false;
-    }
-    
+    const message = log.message || log;
+    if (filter && !message.toLowerCase().includes(filter.toLowerCase())) return false;
+
     if (logLevel !== 'all') {
       const logClass = getLogClass(log);
       if (logLevel === 'info' && !['log-info', 'log-success', 'log-command', 'log-media'].includes(logClass)) return false;
       if (logLevel === 'warning' && logClass !== 'log-warning') return false;
       if (logLevel === 'error' && logClass !== 'log-error') return false;
     }
-    
+
     return true;
   });
 
@@ -56,54 +51,46 @@ function LogsTab() {
     }
   }, [filteredLogs, autoScroll]);
 
-  // ИСПРАВЛЕНО: очищаем таймер при размонтировании
   useEffect(() => {
     connectWebSocket();
-
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-      }
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     };
   }, []);
 
-  // ИСПРАВЛЕНО: функция подключения с защитой от дублирования
-  const connectWebSocket = () => {
-    // Если уже подключены или подключаемся, не создаем новое соединение
+  const connectWebSocket = useCallback(() => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.CONNECTING || wsRef.current.readyState === WebSocket.OPEN)) {
-      console.log('WebSocket уже подключен или подключается');
       return;
     }
 
     try {
       wsRef.current = new WebSocket('ws://localhost:8081');
-      
+
       wsRef.current.onopen = () => {
-        console.log('✅ Подключен к серверу логов');
         setConnectionStatus('connected');
-        // Очищаем таймер переподключения при успешном подключении
         if (reconnectTimerRef.current) {
           clearTimeout(reconnectTimerRef.current);
           reconnectTimerRef.current = null;
         }
       };
-      
+
       wsRef.current.onmessage = (event) => {
-        if (!paused) {
+        // Читаем из ref, а не из замыкания state
+        if (!pausedRef.current) {
           try {
             const logData = JSON.parse(event.data);
-            // ИСПРАВЛЕНО: Добавляем проверку на дубликаты (по времени и сообщению)
             setLogs(prev => {
-              const newLog = `[${new Date(logData.timestamp).toLocaleTimeString()}] ${logData.message}`;
-              
-              // Проверяем, не дублируется ли последний лог
-              if (prev.length > 0 && prev[prev.length - 1] === newLog) {
-                return prev; // Пропускаем дубликат
+              const newLog = {
+                timestamp: logData.timestamp,
+                message: logData.message,
+                timeStr: new Date(logData.timestamp).toLocaleTimeString()
+              };
+
+              if (prev.length > 0 && prev[prev.length - 1].message === newLog.message) {
+                return prev;
               }
-              
+
               return [...prev, newLog].slice(-1000);
             });
           } catch (e) {
@@ -111,16 +98,13 @@ function LogsTab() {
           }
         }
       };
-      
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket ошибка:', error);
+
+      wsRef.current.onerror = () => {
         setConnectionStatus('error');
       };
-      
+
       wsRef.current.onclose = () => {
         setConnectionStatus('disconnected');
-        
-        // Переподключаемся только если нет активного таймера
         if (!reconnectTimerRef.current) {
           reconnectTimerRef.current = setTimeout(() => {
             reconnectTimerRef.current = null;
@@ -132,78 +116,87 @@ function LogsTab() {
       console.error('Ошибка подключения к логам:', error);
       setConnectionStatus('error');
     }
-  };
+  }, []);
 
-  const clearLogs = () => {
-    setLogs([]);
-  };
+  const clearLogs = () => setLogs([]);
 
   const exportLogs = () => {
-    const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
+    const logText = logs.map(log => `[${log.timeStr}] ${log.message}`).join('\n');
+    const blob = new Blob([logText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `bot-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
     a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getConnectionText = () => {
+    switch (connectionStatus) {
+      case 'connected': return 'Подключено';
+      case 'disconnected': return 'Отключено';
+      case 'error': return 'Ошибка';
+      default: return 'Неизвестно';
+    }
   };
 
   return (
     <div className="logs-tab">
       <div className="logs-header">
-        <h2>📋 Логи сервера</h2>
-        <div className="connection-status">
-          <span className={`status-dot ${connectionStatus}`}></span>
-          {connectionStatus === 'connected' && '🟢 Подключено'}
-          {connectionStatus === 'disconnected' && '🔴 Отключено'}
-          {connectionStatus === 'error' && '🟡 Ошибка'}
+        <div className="logs-title">
+          <h2>📋 Логи сервера</h2>
+          <div className={`connection-status ${connectionStatus}`}>
+            <span className="connection-dot"></span>
+            <span>{getConnectionText()}</span>
+          </div>
         </div>
       </div>
 
       <div className="logs-controls">
         <div className="search-box">
+          <FaSearch className="search-icon" />
           <input
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Фильтр логов..."
+            placeholder="Поиск по логам..."
             className="filter-input"
           />
+          {filter && (
+            <button className="search-clear" onClick={() => setFilter('')}>✕</button>
+          )}
         </div>
 
-        <select 
-          value={logLevel} 
-          onChange={(e) => setLogLevel(e.target.value)}
-          className="level-select"
-        >
-          <option value="all">Все уровни</option>
-          <option value="info">ℹ️ Инфо</option>
-          <option value="warning">⚠️ Предупреждения</option>
-          <option value="error">❌ Ошибки</option>
-        </select>
+        <div className="filter-group">
+          <FaFilter className="filter-icon" />
+          <select value={logLevel} onChange={(e) => setLogLevel(e.target.value)} className="level-select">
+            <option value="all">Все уровни</option>
+            <option value="info">ℹ️ Инфо</option>
+            <option value="warning">⚠️ Предупреждения</option>
+            <option value="error">❌ Ошибки</option>
+          </select>
+        </div>
 
-        <button 
-          onClick={() => setAutoScroll(!autoScroll)} 
-          className={`control-btn ${autoScroll ? 'active' : ''}`}
-          title="Автоскролл"
-        >
-          {autoScroll ? <FaPlay /> : <FaPause />}
-        </button>
+        <div className="control-buttons">
+          <button
+            onClick={() => setAutoScroll(!autoScroll)}
+            className={`control-btn ${autoScroll ? 'active' : ''}`}
+            title={autoScroll ? 'Автоскролл вкл' : 'Автоскролл выкл'}
+          >
+            {autoScroll ? <FaPlay /> : <FaPause />}
+          </button>
 
-        <button 
-          onClick={() => setPaused(!paused)} 
-          className={`control-btn ${paused ? 'paused' : ''}`}
-          title={paused ? 'Возобновить' : 'Пауза'}
-        >
-          {paused ? <FaPlay /> : <FaPause />}
-        </button>
+          <button
+            onClick={() => setPaused(!paused)}
+            className={`control-btn ${paused ? 'paused' : ''}`}
+            title={paused ? 'Возобновить' : 'Пауза'}
+          >
+            {paused ? <FaPlay /> : <FaPause />}
+          </button>
 
-        <button onClick={clearLogs} className="control-btn" title="Очистить">
-          <FaTrash />
-        </button>
-
-        <button onClick={exportLogs} className="control-btn" title="Экспорт">
-          <FaDownload />
-        </button>
+          <button onClick={clearLogs} className="control-btn" title="Очистить"><FaTrash /></button>
+          <button onClick={exportLogs} className="control-btn" title="Экспорт"><FaDownload /></button>
+        </div>
       </div>
 
       <div className="logs-container">
@@ -215,15 +208,18 @@ function LogsTab() {
                 <p className="empty-hint">Логи будут появляться здесь по мере работы бота</p>
               </>
             ) : (
-              <p>🔍 Нет логов, соответствующих фильтру</p>
+              <>
+                <p>🔍 Нет логов, соответствующих фильтру</p>
+                <button onClick={() => setFilter('')} className="clear-filter-btn">Очистить фильтр</button>
+              </>
             )}
           </div>
         ) : (
           <div className="logs-list">
             {filteredLogs.map((log, index) => (
-              <div key={`${log}-${index}`} className={`log-entry ${getLogClass(log)}`}>
-                <span className="log-timestamp">{log.split(']')[0]}]</span>
-                <span className="log-message">{log.split(']').slice(1).join(']')}</span>
+              <div key={`${log.timestamp}-${index}`} className={`log-entry ${getLogClass(log)}`}>
+                <span className="log-timestamp">{log.timeStr}</span>
+                <span className="log-message">{log.message}</span>
               </div>
             ))}
             <div ref={logsEndRef} />
@@ -235,6 +231,7 @@ function LogsTab() {
         <span>Всего логов: {logs.length}</span>
         <span>Отображено: {filteredLogs.length}</span>
         {paused && <span className="paused-indicator">⏸️ Пауза</span>}
+        {filter && <span className="filter-indicator">🔍 Фильтр: "{filter}"</span>}
       </div>
     </div>
   );

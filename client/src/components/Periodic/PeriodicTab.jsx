@@ -1,57 +1,39 @@
 // client/src/components/Periodic/PeriodicTab.jsx
 import { useState } from 'react';
-import { FaPlus, FaTrash, FaPowerOff, FaPlay } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaPowerOff, FaEdit, FaPlay } from 'react-icons/fa';
+import Modal from '../Common/Modal';
 import PeriodicEditor from './PeriodicEditor';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification/Notification';
 import './PeriodicTab.css';
 
 function PeriodicTab({ events, onUpdate, overlays = [] }) {
   const { showNotification, showConfirm } = useNotification();
-  const [newEvent, setNewEvent] = useState({ name: '' });
-  const [expandedEvents, setExpandedEvents] = useState({});
+  const [editingEvent, setEditingEvent] = useState(null);
 
-  const toggleExpand = (eventKey) => {
-    setExpandedEvents(prev => ({ ...prev, [eventKey]: !prev[eventKey] }));
-  };
-
-  const addEvent = () => {
-    if (!newEvent.name.trim()) {
-      showNotification('⚠️ Введите название события!', NOTIFICATION_TYPES.WARNING, 2000);
-      return;
-    }
-
-    const eventKey = newEvent.name.trim();
-
-    if (events[eventKey]) {
-      showNotification('❌ Событие с таким именем уже существует!', NOTIFICATION_TYPES.ERROR, 3000);
-      return;
-    }
-
-    const eventConfig = {
-      enabled: true,
-      interval: 300,
-      response: {
-        chat: {
+  const getEmptyConfig = () => ({
+    enabled: true,
+    interval: 300,
+    response: {
+      chat: { enabled: false, components: [] },
+      media: {
+        enabled: false,
+        file: '',
+        volume: 100,
+        overlay: null,
+        text: {
           enabled: false,
-          components: []
+          content: '',
+          position: 'overlay',
+          animation: 'none',
+          font: {}
         },
-        media: {
-          enabled: false,
-          file: '',
-          volume: 100,
-          overlay: null,
-          text: {
-            enabled: false,
-            content: '',
-            position: 'overlay'
-          }
-        }
+        animation: { enter: 'none', exit: 'none' }
       }
-    };
+    }
+  });
 
-    onUpdate({ ...events, [eventKey]: eventConfig });
-    setNewEvent({ name: '' });
-    showNotification(`✅ Событие "${eventKey}" создано`, NOTIFICATION_TYPES.SUCCESS, 2000);
+  const openCreateModal = () => {
+    setEditingEvent({ key: null, config: getEmptyConfig(), isNew: true });
   };
 
   const deleteEvent = (eventKey) => {
@@ -66,33 +48,55 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
     );
   };
 
-  const updateEvent = (key, newConfig) => {
+  const updateEvent = (oldKey, newConfig, isNew = false) => {
     const newEvents = { ...events };
+    const newKey = newConfig._newName || oldKey;
 
-    // Если имя изменилось
-    if (newConfig._newName && newConfig._newName !== key) {
-      delete newEvents[key];
-      const { _newName, ...configWithoutNewName } = newConfig;
-      newEvents[_newName] = configWithoutNewName;
-      showNotification(`✏️ Событие переименовано: "${key}" → "${_newName}"`, NOTIFICATION_TYPES.INFO, 2000);
+    if (!isNew && !oldKey) return;
+
+    const finalKey = isNew ? newConfig._newName : newKey;
+
+    if (!finalKey || !finalKey.trim()) {
+      showNotification('⚠️ Введите название события!', NOTIFICATION_TYPES.WARNING, 2000);
+      return;
+    }
+
+    if (isNew && newEvents[finalKey]) {
+      showNotification('❌ Событие с таким именем уже существует!', NOTIFICATION_TYPES.ERROR, 3000);
+      return;
+    }
+
+    if (!isNew && newKey !== oldKey && newEvents[newKey]) {
+      showNotification('❌ Событие с таким именем уже существует!', NOTIFICATION_TYPES.ERROR, 3000);
+      return;
+    }
+
+    const { _newName, ...cleanConfig } = newConfig;
+
+    if (isNew) {
+      newEvents[finalKey] = cleanConfig;
+      showNotification(`✅ Событие "${finalKey}" создано`, NOTIFICATION_TYPES.SUCCESS, 2000);
+    } else if (newKey !== oldKey) {
+      delete newEvents[oldKey];
+      newEvents[newKey] = cleanConfig;
+      showNotification(`✏️ Событие переименовано: "${oldKey}" → "${newKey}"`, NOTIFICATION_TYPES.INFO, 2000);
     } else {
-      const { _newName, ...configWithoutNewName } = newConfig;
-      newEvents[key] = configWithoutNewName;
+      newEvents[oldKey] = cleanConfig;
+      showNotification(`✅ Событие "${oldKey}" сохранено`, NOTIFICATION_TYPES.SUCCESS, 2000);
     }
 
     onUpdate(newEvents);
+    setEditingEvent(null);
   };
 
-  const toggleEventStatus = (eventKey, e) => {
+  const toggleEventStatus = (eventKey, currentStatus, e) => {
     e.stopPropagation();
-    const eventConfig = events[eventKey];
-    const newStatus = !eventConfig.enabled;
-
+    const event = events[eventKey];
+    const newStatus = !currentStatus;
     onUpdate({
       ...events,
-      [eventKey]: { ...eventConfig, enabled: newStatus }
+      [eventKey]: { ...event, enabled: newStatus }
     });
-
     showNotification(
       `${newStatus ? '🔛' : '🔴'} Событие "${eventKey}" ${newStatus ? 'включено' : 'выключено'}`,
       NOTIFICATION_TYPES.INFO,
@@ -146,35 +150,26 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
     return parts.join(' ');
   };
 
-  const getResponseBadge = (config) => {
-    if (!config.response) return '💤 Не настроено';
-    
-    const hasChat = config.response.chat?.enabled;
-    const hasMedia = config.response.media?.enabled;
+  const getReactionType = (config) => {
+    const hasChat = config.response?.chat?.enabled;
+    const hasMedia = config.response?.media?.enabled;
 
-    const parts = [];
-    if (hasChat) parts.push('💬');
-    if (hasMedia) parts.push('🎬');
-    
-    return parts.length > 0 ? parts.join(' ') : '💤 Нет реакции';
+    if (!hasChat && !hasMedia) return { icon: '💤', text: 'Нет реакции' };
+    if (hasChat && !hasMedia) return { icon: '💬', text: 'Текст' };
+    if (!hasChat && hasMedia) return { icon: '🎬', text: 'Медиа' };
+    return { icon: '💬🎬', text: 'Текст + Медиа' };
   };
 
-  const getOverlayInfo = (config, overlays) => {
+  const getOverlayInfo = (config) => {
     if (!config.response?.media?.enabled || !config.response?.media?.overlay) return null;
     const overlay = config.response.media.overlay;
     return overlays.find(o => o.id === (overlay.id || overlay));
   };
 
-  const getReactionType = (config) => {
-    if (!config.response) return { icon: '💤', text: 'Нет реакции' };
-    
-    const hasChat = config.response.chat?.enabled;
-    const hasMedia = config.response.media?.enabled;
-
-    if (!hasChat && !hasMedia) return { icon: '💤', text: 'Нет реакции' };
-    if (hasChat && !hasMedia) return { icon: '💬', text: 'Тип: Текст' };
-    if (!hasChat && hasMedia) return { icon: '🎬', text: 'Тип: Медиа' };
-    if (hasChat && hasMedia) return { icon: '💬🎬', text: 'Тип: Текст + Медиа' };
+  const getModalTitle = () => {
+    if (!editingEvent) return '';
+    if (editingEvent.isNew) return 'Создание периодического события';
+    return `Редактирование события "${editingEvent.key || ''}"`;
   };
 
   return (
@@ -184,33 +179,43 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
         <p className="periodic-description">
           События, которые срабатывают автоматически через равные промежутки времени.
         </p>
-        <button onClick={restartTimers} className="restart-timers-btn">
-          🔄 Перезапустить все таймеры
-        </button>
+        <div className="periodic-header-actions">
+          <button onClick={restartTimers} className="restart-timers-btn">
+            🔄 Перезапустить таймеры
+          </button>
+          <button onClick={openCreateModal} className="create-periodic-btn">
+            <FaPlus /> Создать событие
+          </button>
+        </div>
       </div>
 
       <div className="periodic-list">
-        {Object.entries(events).length === 0 && (
+        {Object.keys(events).length === 0 && (
           <div className="empty-periodic">
-            <p>📭 Пока нет периодических событий</p>
-            <p className="hint">Создайте первое событие ниже</p>
+            <p>📭 Периодических событий нет</p>
+            <p className="hint">Нажмите "Создать событие" чтобы добавить первое событие</p>
           </div>
         )}
 
         {Object.entries(events).map(([eventKey, config]) => {
-          const overlayInfo = getOverlayInfo(config, overlays);
           const reactionType = getReactionType(config);
+          const overlayInfo = getOverlayInfo(config);
+          const isEnabled = config.enabled !== false;
+          const interval = config.interval || 300;
 
           return (
-            <div key={eventKey} className={`periodic-card ${config.enabled === false ? 'disabled' : ''}`}>
-              <div className="periodic-card-header" onClick={() => toggleExpand(eventKey)}>
+            <div key={eventKey} className={`periodic-card ${!isEnabled ? 'disabled' : ''}`}>
+              <div className="periodic-card-header">
                 <div className="periodic-title">
                   <span className="periodic-name">{eventKey}</span>
-                  <span className="periodic-type-badge" title={reactionType.text}>
-                    {reactionType.icon} {reactionType.text}
+                  <span className={`periodic-status-badge ${isEnabled ? 'enabled' : 'disabled'}`}>
+                    {isEnabled ? 'Вкл' : 'Выкл'}
                   </span>
-                  <span className="periodic-interval-badge" title={`${config.interval || 300} секунд`}>
-                    ⏱️ {formatInterval(config.interval || 300)}
+                  <span className="periodic-interval-badge" title={`${interval} секунд`}>
+                    ⏱️ {formatInterval(interval)}
+                  </span>
+                  <span className="periodic-type-badge">
+                    {reactionType.icon} {reactionType.text}
                   </span>
                   {overlayInfo && (
                     <span className="overlay-badge">🖥️ Оверлей: {overlayInfo.name}</span>
@@ -225,55 +230,54 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
                     <FaPlay />
                   </button>
                   <button
-                    onClick={(e) => toggleEventStatus(eventKey, e)}
-                    className={`status-toggle-btn ${config.enabled === false ? 'off' : 'on'}`}
-                    title={config.enabled === false ? 'Включить' : 'Выключить'}
+                    onClick={(e) => toggleEventStatus(eventKey, isEnabled, e)}
+                    className={`status-toggle-btn ${isEnabled ? 'on' : 'off'}`}
+                    title={isEnabled ? 'Выключить' : 'Включить'}
                   >
                     <FaPowerOff />
                   </button>
                   <button
+                    onClick={() => setEditingEvent({ key: eventKey, config })}
+                    className="edit-btn"
+                    title="Редактировать"
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); deleteEvent(eventKey); }}
                     className="delete-btn"
+                    title="Удалить"
                   >
                     <FaTrash />
                   </button>
-                  <span className="expand-icon">{expandedEvents[eventKey] ? '▼' : '▶'}</span>
                 </div>
               </div>
-
-              {expandedEvents[eventKey] && (
-                <div className="periodic-editor-container">
-                  <PeriodicEditor
-                    eventKey={eventKey}
-                    event={config}
-                    onUpdate={(updated) => updateEvent(eventKey, updated)}
-                    overlays={overlays}
-                  />
-                </div>
-              )}
             </div>
           );
         })}
       </div>
 
-      <div className="add-periodic-section">
-        <h3>➕ Новое событие</h3>
-        <div className="add-periodic-form">
-          <input
-            type="text"
-            value={newEvent.name}
-            onChange={(e) => setNewEvent({ name: e.target.value })}
-            placeholder="Название события"
-            className="new-periodic-input"
+      {/* Единое модальное окно для создания и редактирования */}
+      <Modal
+        isOpen={!!editingEvent}
+        onClose={() => setEditingEvent(null)}
+        title={getModalTitle()}
+        size="xlarge"
+      >
+        {editingEvent && (
+          <PeriodicEditor
+            eventKey={editingEvent.isNew ? '' : editingEvent.key}
+            event={editingEvent.config}
+            onUpdate={(updated) => updateEvent(
+              editingEvent.key,
+              updated,
+              editingEvent.isNew
+            )}
+            overlays={overlays}
+            isNew={editingEvent.isNew}
           />
-          <button onClick={addEvent} className="add-periodic-btn">
-            <FaPlus /> Создать
-          </button>
-        </div>
-        <p className="form-hint">
-          После создания вы сможете настроить текстовый ответ и/или медиа на оверлей
-        </p>
-      </div>
+        )}
+      </Modal>
     </div>
   );
 }

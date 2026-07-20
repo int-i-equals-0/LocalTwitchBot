@@ -1,6 +1,6 @@
 // client/src/components/Common/ChatEditor.jsx
 import { useState } from 'react';
-import { FaTrash, FaPlus, FaRandom, FaSpaceShuttle, FaArrowUp, FaArrowDown, FaUsers, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaRandom, FaSpaceShuttle, FaArrowUp, FaArrowDown, FaUsers } from 'react-icons/fa';
 import { MdRefresh } from 'react-icons/md';
 import Tooltip from '../Tooltip';
 import './ChatEditor.css';
@@ -11,7 +11,7 @@ function ChatEditor({ value = { enabled: false, components: [] }, onChange }) {
   const generatePreview = () => {
     if (!value.components || value.components.length === 0) return '';
     
-    return value.components.map((comp, index) => {
+    return value.components.map((comp) => {
       switch (comp.type) {
         case 'space': return ' ';
         case 'static': return comp.value || '';
@@ -33,13 +33,6 @@ function ChatEditor({ value = { enabled: false, components: [] }, onChange }) {
         default: return '';
       }
     }).join('');
-  };
-
-  const toggleEnabled = () => {
-    onChange({
-      ...value,
-      enabled: !value.enabled
-    });
   };
 
   const addComponent = (type) => {
@@ -121,7 +114,6 @@ function ChatEditor({ value = { enabled: false, components: [] }, onChange }) {
     const newComponents = [...(value.components || [])];
     const phrases = newComponents[compIndex].phrases.filter((_, i) => i !== phraseIndex);
     if (phrases.length === 0) {
-      // Если фраз не осталось, удаляем весь компонент
       onChange({
         ...value,
         components: newComponents.filter((_, i) => i !== compIndex)
@@ -271,72 +263,56 @@ function ChatEditor({ value = { enabled: false, components: [] }, onChange }) {
 
   return (
     <div className="chat-editor">
-      <div className="editor-header">
-        <div className="toggle-container">
-          <button 
-            className={`toggle-btn ${value.enabled ? 'enabled' : 'disabled'}`}
-            onClick={toggleEnabled}
-          >
-            {value.enabled ? <FaToggleOn /> : <FaToggleOff />}
-            <span>{value.enabled ? 'Текст в чат включён' : 'Текст в чат выключен'}</span>
-          </button>
-          <Tooltip text="Включить отправку текстового сообщения в чат" />
-        </div>
+      <div className="components-list">
+        {(!value.components || value.components.length === 0) ? (
+          <div className="empty-components">
+            <p>✨ Начните добавлять компоненты для создания сообщения</p>
+            <p className="hint">Добавьте текст, переменные, случайные числа или наборы фраз</p>
+          </div>
+        ) : (
+          value.components.map((comp, idx) => renderComponent(comp, idx))
+        )}
       </div>
 
-      {value.enabled && (
-        <div className="editor-content">
-          <div className="components-list">
-            {(!value.components || value.components.length === 0) ? (
-              <div className="empty-components">
-                <p>✨ Начните добавлять компоненты для создания сообщения</p>
-              </div>
-            ) : (
-              value.components.map((comp, idx) => renderComponent(comp, idx))
-            )}
-          </div>
+      <div className="add-component-buttons">
+        <button onClick={() => addComponent('static')} className="add-btn">
+          <FaPlus /> Текст
+        </button>
+        <button onClick={() => addComponent('author')} className="add-btn">
+          <FaPlus /> Автор
+        </button>
+        <button onClick={() => addComponent('target')} className="add-btn">
+          <FaPlus /> Цель
+        </button>
+        <button onClick={() => addComponent('randomViewer')} className="add-btn">
+          <FaUsers /> Случайный зритель
+        </button>
+        <button onClick={() => addComponent('random')} className="add-btn">
+          <FaRandom /> Случайное число
+        </button>
+        <button onClick={() => addComponent('phrase')} className="add-btn">
+          <FaPlus /> Набор фраз
+        </button>
+        <button onClick={() => addComponent('space')} className="add-btn space-btn">
+          <FaSpaceShuttle /> Пробел
+        </button>
+      </div>
 
-          <div className="add-component-buttons">
-            <button onClick={() => addComponent('static')} className="add-btn">
-              <FaPlus /> Текст
-            </button>
-            <button onClick={() => addComponent('author')} className="add-btn">
-              <FaPlus /> Автор
-            </button>
-            <button onClick={() => addComponent('target')} className="add-btn">
-              <FaPlus /> Цель
-            </button>
-            <button onClick={() => addComponent('randomViewer')} className="add-btn">
-              <FaUsers /> Случайный зритель
-            </button>
-            <button onClick={() => addComponent('random')} className="add-btn">
-              <FaRandom /> Случайное число
-            </button>
-            <button onClick={() => addComponent('phrase')} className="add-btn">
-              <FaPlus /> Набор фраз
-            </button>
-            <button onClick={() => addComponent('space')} className="add-btn space-btn">
-              <FaSpaceShuttle /> Пробел
-            </button>
-          </div>
-
-          <div className="preview-section">
-            <div className="preview-header">
-              <strong>Предпросмотр:</strong>
-              <button onClick={() => setPreviewKey(prev => prev + 1)} className="refresh-preview-btn" title="Обновить">
-                <MdRefresh /> Обновить
-              </button>
-            </div>
-            <div className="preview-box">
-              {generatePreview() ? (
-                <span className="preview-text">{generatePreview()}</span>
-              ) : (
-                <span className="preview-placeholder">Сообщение будет выглядеть так...</span>
-              )}
-            </div>
-          </div>
+      <div className="preview-section">
+        <div className="preview-header">
+          <strong>Предпросмотр:</strong>
+          <button onClick={() => setPreviewKey(prev => prev + 1)} className="refresh-preview-btn" title="Обновить">
+            <MdRefresh /> Обновить
+          </button>
         </div>
-      )}
+        <div className="preview-box">
+          {generatePreview() ? (
+            <span className="preview-text">{generatePreview()}</span>
+          ) : (
+            <span className="preview-placeholder">Сообщение будет выглядеть так...</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
