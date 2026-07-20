@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Настройки бота</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: white; }
+        .command { background: #333; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        input, select, button { padding: 8px; margin: 5px; background: #444; color: white; border: 1px solid #666; }
+        button { cursor: pointer; background: #6441a5; border: none; }
+        button:hover { background: #7d5bbe; }
+    </style>
+</head>
+<body>
+    <h1>🎮 Настройки Twitch бота</h1>
+    
+    <div id="commands"></div>
+    
+    <h2>➕ Добавить команду</h2>
+    <div>
+        <input type="text" id="cmdName" placeholder="Название (без !)">
+        <select id="cmdType">
+            <option value="text">Текст</option>
+            <option value="video">Видео</option>
+        </select>
+        <div id="textFields">
+            <input type="text" id="cmdTemplate" placeholder="Шаблон (используй {user} и {target})" value="@{user} сказал привет">
+        </div>
+        <div id="videoFields" style="display:none">
+            <input type="text" id="cmdFile" placeholder="Имя файла (например, frog.mp4)">
+            <input type="number" id="cmdDuration" placeholder="Длительность (сек)" value="10">
+        </div>
+        <button onclick="addCommand()">Добавить</button>
+        <button onclick="saveCommands()" style="background: #28a745">💾 Сохранить всё</button>
+    </div>
+
+    <script>
+        let commands = {};
+
+        // Загружаем команды
+        async function loadCommands() {
+            const res = await fetch('/api/commands');
+            commands = await res.json();
+            renderCommands();
+        }
+
+        // Показываем/скрываем поля в зависимости от типа
+        document.getElementById('cmdType').addEventListener('change', function() {
+            if (this.value === 'text') {
+                document.getElementById('textFields').style.display = 'block';
+                document.getElementById('videoFields').style.display = 'none';
+            } else {
+                document.getElementById('textFields').style.display = 'none';
+                document.getElementById('videoFields').style.display = 'block';
+            }
+        });
+
+        // Добавляем команду
+        function addCommand() {
+            const name = document.getElementById('cmdName').value;
+            const type = document.getElementById('cmdType').value;
+            
+            if (!name) {
+                alert('Введи название команды!');
+                return;
+            }
+
+            const cmdKey = '!' + name;
+            
+            if (type === 'text') {
+                const template = document.getElementById('cmdTemplate').value;
+                commands[cmdKey] = { type: 'text', template: template };
+            } else {
+                const file = document.getElementById('cmdFile').value;
+                const duration = document.getElementById('cmdDuration').value;
+                if (!file) {
+                    alert('Укажи имя видеофайла!');
+                    return;
+                }
+                commands[cmdKey] = { type: 'video', file: file, duration: parseInt(duration) };
+            }
+            
+            renderCommands();
+            
+            // Очищаем поля
+            document.getElementById('cmdName').value = '';
+            document.getElementById('cmdTemplate').value = '@{user} сказал привет';
+            document.getElementById('cmdFile').value = '';
+        }
+
+        // Удаляем команду
+        function deleteCommand(key) {
+            delete commands[key];
+            renderCommands();
+        }
+
+        // Сохраняем на сервер
+        async function saveCommands() {
+            const res = await fetch('/api/commands', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(commands)
+            });
+            if (res.ok) {
+                alert('Команды сохранены!');
+            }
+        }
+
+        // Отрисовываем список команд
+        function renderCommands() {
+            const container = document.getElementById('commands');
+            container.innerHTML = '<h2>📋 Текущие команды</h2>';
+            
+            for (const [cmd, config] of Object.entries(commands)) {
+                const div = document.createElement('div');
+                div.className = 'command';
+                div.innerHTML = `
+                    <strong>${cmd}</strong> - ${config.type === 'text' ? '💬 ' + config.template : '🎬 ' + config.file + ' (' + config.duration + 'сек)'}
+                    <button onclick="deleteCommand('${cmd}')" style="float:right; background:#dc3545">❌</button>
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        // Загружаем при старте
+        loadCommands();
+    </script>
+</body>
+</html>

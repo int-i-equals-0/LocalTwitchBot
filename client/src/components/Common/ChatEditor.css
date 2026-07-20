@@ -1,0 +1,68 @@
+/* client/src/components/Common/ChatEditor.css */
+.chat-editor {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.editor-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #404040;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 30px;
+  transition: all 0.2s;
+}
+
+.toggle-btn.enabled {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+}
+
+.toggle-btn.disabled {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.toggle-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.toggle-btn svg {
+  font-size: 24px;
+}
+
+.editor-content {
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

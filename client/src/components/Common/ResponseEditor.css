@@ -1,0 +1,163 @@
+/* client/src/components/Common/ResponseEditor.css */
+.response-editor {
+  background: #262626;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.response-tabs {
+  display: flex;
+  background: #2d2d2d;
+  border-bottom: 2px solid #404040;
+  padding: 0 10px;
+  gap: 5px;
+}
+
+.response-tab {
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+
+.response-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.response-tab.active {
+  color: #9147ff;
+  border-bottom-color: #9147ff;
+}
+
+.response-content {
+  padding: 20px;
+}
+
+/* Стили для редактора алиасов */
+.aliases-editor {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.aliases-header {
+  margin-bottom: 20px;
+}
+
+.aliases-header h4 {
+  color: #9147ff;
+  margin-bottom: 8px;
+}
+
+.aliases-description {
+  color: #888;
+  font-size: 14px;
+}
+
+.aliases-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  min-height: 50px;
+  background: #363636;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.empty-aliases {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+}
+
+.alias-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #404040;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.alias-name {
+  color: #17a2b8;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.remove-alias-btn {
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  opacity: 0.5;
+  transition: all 0.2s;
+}
+
+.remove-alias-btn:hover {
+  opacity: 1;
+}
+
+.add-alias-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.alias-input {
+  flex: 1;
+  background: #404040;
+  border: 1px solid #555;
+  color: white;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.alias-input:focus {
+  outline: none;
+  border-color: #9147ff;
+}
+
+.add-alias-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.add-alias-btn:hover {
+  background: #218838;
+}
+
+.aliases-warning {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid #ffc107;
+  color: #ffc107;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 13px;
+}
