@@ -1,8 +1,8 @@
 @echo off
 chcp 65001 > nul
-title Local Streamer Bot - Клиент
+title Local Twitch Bot - Клиент
 echo ========================================
-echo    Запуск клиента Local Streamer Bot
+echo    Запуск клиента Local Twitch Bot
 echo ========================================
 echo.
 
@@ -12,7 +12,7 @@ echo 🚀 Запускаем клиент на http://127.0.0.1:3000
 echo.
 
 REM Запускаем клиент
-start "Local Streamer Bot Client" cmd /c npm run dev -- --host 127.0.0.1
+start "Local Twitch Bot Client" cmd /c npm run dev -- --host 127.0.0.1
 
 echo ⏳ Проверка доступности сервера (порт 3001)...
 echo.

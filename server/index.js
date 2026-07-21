@@ -374,8 +374,6 @@ function updateFromConfig() {
       CONFIG.botUsername = FULL_CONFIG.tokens.botUsername;
     if (FULL_CONFIG.tokens.clientId)
       CONFIG.clientId = FULL_CONFIG.tokens.clientId;
-    if (FULL_CONFIG.tokens.clientSecret)
-      CLIENT_SECRET = FULL_CONFIG.tokens.clientSecret;
 
     if (FULL_CONFIG.tokens.accessToken) {
       const token = FULL_CONFIG.tokens.accessToken.replace("oauth:", "");
@@ -2529,36 +2527,72 @@ function disconnectEventSub() {
 
 // ========== ПЕРИОДИЧЕСКИЕ СОБЫТИЯ ==========
 function stopAllTimers() {
-  activeTimers.forEach((id, name) => {
-    clearInterval(id);
+  activeTimers.forEach((timer, name) => {
+    if (timer.timeoutId) clearTimeout(timer.timeoutId);
+    if (timer.intervalId) clearInterval(timer.intervalId);
     console.log(`[INFO] Таймер остановлен: ${name}`);
   });
   activeTimers.clear();
 }
 
 function startTimer(name, event) {
-  if (activeTimers.has(name)) {
-    clearInterval(activeTimers.get(name));
+  // Очищаем оба: и timeout, и interval
+  const existing = activeTimers.get(name);
+  if (existing) {
+    clearTimeout(existing.timeoutId);
+    clearInterval(existing.intervalId);
     activeTimers.delete(name);
   }
   if (!event.enabled) return;
-  const ms = (event.interval || 60) * 1000;
-  const tag = botFullyReady ? "[INFO]" : "[START]";
-  console.log(`${tag} Таймер "${name}": интервал ${event.interval} сек`);
-  const id = setInterval(async () => {
-    try {
-      const fresh = loadPeriodicEvents()[name];
-      if (!fresh || !fresh.enabled) {
-        clearInterval(id);
-        activeTimers.delete(name);
-        return;
+
+  const intervalMs = (event.interval || 60) * 1000;
+  const offsetMs = (event.offset || 0) * 1000;
+
+  // offset не должен быть >= interval
+  const effectiveOffset = offsetMs % intervalMs;
+
+  const tag = botFullyReady ? '[INFO]' : '[START]';
+  console.log(
+    `${tag} Таймер "${name}": интервал ${event.interval} сек` +
+    (effectiveOffset > 0 ? `, смещение ${effectiveOffset / 1000} сек` : '')
+  );
+
+  // Первое срабатывание через offset, затем setInterval
+  const timeoutId = setTimeout(() => {
+    // Первое срабатывание
+    (async () => {
+      try {
+        const fresh = loadPeriodicEvents()[name];
+        if (!fresh || !fresh.enabled) {
+          activeTimers.delete(name);
+          return;
+        }
+        await executePeriodicEvent(name, fresh);
+      } catch (e) {
+        console.error(`[ERROR] Событие "${name}":`, e.message || e);
       }
-      await executePeriodicEvent(name, fresh);
-    } catch (e) {
-      console.error(`[ERROR] Событие "${name}":`, e.message || e);
-    }
-  }, ms);
-  activeTimers.set(name, id);
+    })();
+
+    // Далее — интервал
+    const intervalId = setInterval(async () => {
+      try {
+        const fresh = loadPeriodicEvents()[name];
+        if (!fresh || !fresh.enabled) {
+          clearInterval(intervalId);
+          activeTimers.delete(name);
+          return;
+        }
+        await executePeriodicEvent(name, fresh);
+      } catch (e) {
+        console.error(`[ERROR] Событие "${name}":`, e.message || e);
+      }
+    }, intervalMs);
+
+    // Обновляем запись в activeTimers
+    activeTimers.set(name, { timeoutId: null, intervalId });
+  }, effectiveOffset);
+
+  activeTimers.set(name, { timeoutId, intervalId: null });
 }
 
 async function executePeriodicEvent(name, event) {
@@ -3226,7 +3260,9 @@ app.get("/api/media-files", async (req, res) => {
 
 app.delete("/api/media-files/:filename", async (req, res) => {
   try {
-    const fp = path.join(mediaDir, req.params.filename);
+    const filename = path.basename(req.params.filename); // только имя файла, без пути
+    const fp = path.join(mediaDir, filename);
+    if (!fp.startsWith(mediaDir)) return res.status(400).json({ error: "Недопустимый путь" });
     if (!fs.existsSync(fp)) return res.status(404).json({ error: "Не найден" });
     await fsPromises.unlink(fp);
     res.json({ success: true });

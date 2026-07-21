@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FaPlus, FaTrash, FaPowerOff, FaEdit, FaPlay } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import PeriodicEditor from './PeriodicEditor';
+import PeriodicTimeline from './PeriodicTimeline';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './PeriodicTab.css';
 
@@ -14,6 +15,8 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
   const getEmptyConfig = () => ({
     enabled: true,
     interval: 300,
+    offset: 0,
+    color: '',
     response: {
       chat: { enabled: false, components: [] },
       media: {
@@ -151,6 +154,13 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
     return parts.join(' ');
   };
 
+  const formatOffset = (offset, interval) => {
+    if (!offset || offset === 0) return null;
+    const effectiveOffset = ((offset % interval) + interval) % interval;
+    if (effectiveOffset === 0) return null;
+    return formatInterval(effectiveOffset);
+  };
+
   const getReactionType = (config) => {
     const hasChat = config.response?.chat?.enabled;
     const hasMedia = config.response?.media?.enabled;
@@ -203,11 +213,18 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
           const overlayInfo = getOverlayInfo(config);
           const isEnabled = config.enabled !== false;
           const interval = config.interval || 300;
+          const offsetLabel = formatOffset(config.offset, interval);
 
           return (
             <div key={eventKey} className={`periodic-card ${!isEnabled ? 'disabled' : ''}`}>
               <div className="periodic-card-header">
                 <div className="periodic-title">
+                  {config.color && (
+                    <span
+                      className="periodic-color-dot"
+                      style={{ backgroundColor: config.color }}
+                    />
+                  )}
                   <span className="periodic-name">{eventKey}</span>
                   <span className={`periodic-status-badge ${isEnabled ? 'enabled' : 'disabled'}`}>
                     {isEnabled ? 'Вкл' : 'Выкл'}
@@ -215,6 +232,11 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
                   <span className="periodic-interval-badge" title={`${interval} секунд`}>
                     ⏱️ {formatInterval(interval)}
                   </span>
+                  {offsetLabel && (
+                    <span className="periodic-offset-badge" title={`Смещение: ${config.offset} секунд`}>
+                      ⏩ +{offsetLabel}
+                    </span>
+                  )}
                   <span className="periodic-type-badge">
                     {reactionType.icon} {reactionType.text}
                   </span>
@@ -257,6 +279,9 @@ function PeriodicTab({ events, onUpdate, overlays = [] }) {
           );
         })}
       </div>
+
+      {/* Таймлайн */}
+      <PeriodicTimeline events={events} onUpdate={onUpdate} />
 
       <Modal
         isOpen={!!editingEvent}
