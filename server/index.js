@@ -740,16 +740,6 @@ async function getRandomViewer() {
   }
 }
 
-if (tokensValid) {
-  setTimeout(() => scheduleTokenRefresh(), 5000);
-  setInterval(async () => {
-    try {
-      viewersCache = await fetchViewersFromAPI();
-      viewersCacheTime = Date.now();
-    } catch (e) {}
-  }, VIEWERS_CACHE_TTL);
-}
-
 // ========== ЗАГРУЗКА ДАННЫХ ==========
 async function loadCommands() {
   try {
@@ -2002,7 +1992,45 @@ function restartTimers() {
 }
 
 // ========== ПОДКЛЮЧЕНИЕ К TWITCH IRC ==========
-if (tokensValid) {
+async function initializeBot() {
+  console.log("[START] Проверка валидности токенов перед подключением...");
+
+  const botValidation = await validateToken(OAUTH_TOKEN);
+  if (!botValidation.valid) {
+    console.log("[START] Токен бота истёк, обновляем...");
+    const refreshed = await refreshTwitchToken("bot");
+    if (!refreshed) {
+      console.error("[ERROR] Не удалось обновить токен бота. IRC не будет подключён.");
+      completeStartupTask("irc");
+      completeStartupTask("ids");
+      completeStartupTask("eventsub");
+      completeStartupTask("timers");
+      return;
+    }
+    FULL_CONFIG = loadFullConfig();
+    updateFromConfig();
+  } else {
+    console.log("[START] Токен бота валиден");
+  }
+
+  if (BROADCASTER_TOKEN) {
+    const broadcasterValidation = await validateToken(BROADCASTER_TOKEN);
+    if (!broadcasterValidation.valid) {
+      console.log("[START] Токен стримера истёк, обновляем...");
+      const refreshed = await refreshTwitchToken("broadcaster");
+      if (!refreshed) {
+        console.warn("[WARN] Не удалось обновить токен стримера");
+      } else {
+        FULL_CONFIG = loadFullConfig();
+        updateFromConfig();
+      }
+    } else {
+      console.log("[START] Токен стримера валиден");
+    }
+  }
+
+  scheduleTokenRefresh();
+
   twitchClient = new tmi.Client({
     options: { debug: false },
     identity: { username: CONFIG.botUsername, password: CONFIG.oauthToken },
@@ -2011,15 +2039,21 @@ if (tokensValid) {
 
   console.log("[START] Подключение к Twitch IRC...");
 
-  twitchClient
-    .connect()
-    .then(() => {
-      console.log(`[START] Бот подключился к каналу ${CONFIG.channel}`);
-      completeStartupTask("irc");
+  try {
+    await twitchClient.connect();
+    console.log(`[START] Бот подключился к каналу ${CONFIG.channel}`);
+    completeStartupTask("irc");
+    setInterval(async () => {
+      try {
+        viewersCache = await fetchViewersFromAPI();
+        viewersCacheTime = Date.now();
+      } catch (e) {}
+    }, VIEWERS_CACHE_TTL);
 
-      checkBotPermissions();
+    checkBotPermissions();
 
-      const channelIdPromise = fetch(
+    try {
+      const channelResp = await fetch(
         `https://api.twitch.tv/helix/users?login=${CHANNEL_NAME}`,
         {
           headers: {
@@ -2027,21 +2061,20 @@ if (tokensValid) {
             Authorization: `Bearer ${OAUTH_TOKEN}`,
           },
         },
-      )
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.data?.[0]) {
-            channelId = data.data[0].id;
-            console.log(`[START] ID канала: ${channelId}`);
-          } else {
-            console.error("[ERROR] Не удалось получить ID канала");
-          }
-        })
-        .catch((e) =>
-          console.error("[ERROR] Ошибка получения ID канала:", e.message || e),
-        );
+      );
+      const channelData = await channelResp.json();
+      if (channelData.data?.[0]) {
+        channelId = channelData.data[0].id;
+        console.log(`[START] ID канала: ${channelId}`);
+      } else {
+        console.error("[ERROR] Не удалось получить ID канала");
+      }
+    } catch (e) {
+      console.error("[ERROR] Ошибка получения ID канала:", e.message || e);
+    }
 
-      const botIdPromise = fetch(
+    try {
+      const botResp = await fetch(
         `https://api.twitch.tv/helix/users?login=${BOT_USERNAME}`,
         {
           headers: {
@@ -2049,135 +2082,131 @@ if (tokensValid) {
             Authorization: `Bearer ${OAUTH_TOKEN}`,
           },
         },
-      )
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.data?.[0]) {
-            botId = data.data[0].id;
-            console.log(`[START] ID бота: ${botId}`);
-          } else {
-            console.warn("[WARN] Не удалось получить ID бота");
-          }
-        })
-        .catch((e) =>
-          console.error("[ERROR] Ошибка получения ID бота:", e.message || e),
-        );
-
-      Promise.all([channelIdPromise, botIdPromise]).then(() => {
-        completeStartupTask("ids");
-        if (channelId) {
-          setTimeout(() => connectEventSub(), 2000);
-        } else {
-          console.error(
-            "[ERROR] channelId не получен, EventSub не будет подключен",
-          );
-          completeStartupTask("eventsub");
-        }
-      });
-
-      setTimeout(() => startAllTimers(), 5000);
-    })
-    .catch((err) => {
-      console.error(
-        "[ERROR] Не удалось подключиться к Twitch IRC:",
-        err.message || err,
       );
-      completeStartupTask("irc");
-      completeStartupTask("ids");
-      completeStartupTask("eventsub");
-      completeStartupTask("timers");
-    });
-
-  twitchClient.on("message", async (channel, tags, message, self) => {
-    if (self) return;
-
-    const displayName = tags["display-name"] || tags.username;
-
-    if (displayName) {
-      recentChatters.add(displayName);
-      if (recentChatters.size > MAX_RECENT)
-        recentChatters.delete(recentChatters.values().next().value);
-      queueShoutout(displayName);
-    }
-
-    try {
-      if (!message) return;
-
-      const customRewardId = tags["custom-reward-id"];
-      if (customRewardId) {
-        // Всегда обрабатываем награды через IRC для надёжности
-        console.log(
-          `[INFO] IRC: Награда ${customRewardId} от ${displayName}: "${message}"`,
-        );
-        await handleReward(customRewardId, displayName, message);
-        return;
-      }
-
-      const banData = await loadBanWords();
-      const banned = containsBannedWord(message, banData.words);
-      if (banned.found) {
-        console.log(
-          `[INFO] Запрещённое слово "${banned.word}" от ${displayName}`,
-        );
-        if (channelId && botId && tags.id) {
-          try {
-            const resp = await fetch(
-              `https://api.twitch.tv/helix/moderation/chat?broadcaster_id=${channelId}&moderator_id=${botId}&message_id=${tags.id}`,
-              {
-                method: "DELETE",
-                headers: {
-                  "Client-Id": CLIENT_ID,
-                  Authorization: `Bearer ${OAUTH_TOKEN}`,
-                },
-              },
-            );
-            if (resp.status === 204) {
-              console.log("[INFO] Сообщение удалено");
-              await logDeletedMessage(
-                displayName,
-                message,
-                banned.word,
-                banned.type,
-              );
-            }
-          } catch (e) {}
-        }
-        return;
+      const botData = await botResp.json();
+      if (botData.data?.[0]) {
+        botId = botData.data[0].id;
+        console.log(`[START] ID бота: ${botId}`);
+      } else {
+        console.warn("[WARN] Не удалось получить ID бота");
       }
     } catch (e) {
-      console.error("[ERROR] Ошибка обработки банвордов:", e.message || e);
+      console.error("[ERROR] Ошибка получения ID бота:", e.message || e);
     }
 
-    if (!message.startsWith("!")) return;
-    const args = message.slice(1).split(" ");
-    const cmdName = args.shift().toLowerCase();
-    const fullCmd = `!${cmdName}`;
-    const commands = await loadCommands();
+    completeStartupTask("ids");
 
-    let config = commands[fullCmd];
+    if (channelId) {
+      setTimeout(() => connectEventSub(), 2000);
+    } else {
+      console.error("[ERROR] channelId не получен, EventSub не будет подключен");
+      completeStartupTask("eventsub");
+    }
 
-    if (!config) {
-      for (const [key, cmd] of Object.entries(commands)) {
-        if (cmd.aliases && cmd.aliases.includes(fullCmd)) {
-          config = cmd;
-          break;
+    setTimeout(() => startAllTimers(), 5000);
+  } catch (err) {
+    console.error("[ERROR] Не удалось подключиться к Twitch IRC:", err.message || err);
+    completeStartupTask("irc");
+    completeStartupTask("ids");
+    completeStartupTask("eventsub");
+    completeStartupTask("timers");
+  }
+
+  if (twitchClient) {
+    twitchClient.on("message", async (channel, tags, message, self) => {
+      if (self) return;
+
+      const displayName = tags["display-name"] || tags.username;
+
+      if (displayName) {
+        recentChatters.add(displayName);
+        if (recentChatters.size > MAX_RECENT)
+          recentChatters.delete(recentChatters.values().next().value);
+        queueShoutout(displayName);
+      }
+
+      try {
+        if (!message) return;
+
+        const customRewardId = tags["custom-reward-id"];
+        if (customRewardId) {
+          console.log(
+            `[INFO] IRC: Награда ${customRewardId} от ${displayName}: "${message}"`,
+          );
+          await handleReward(customRewardId, displayName, message);
+          return;
+        }
+
+        const banData = await loadBanWords();
+        const banned = containsBannedWord(message, banData.words);
+        if (banned.found) {
+          console.log(
+            `[INFO] Запрещённое слово "${banned.word}" от ${displayName}`,
+          );
+          if (channelId && botId && tags.id) {
+            try {
+              const resp = await fetch(
+                `https://api.twitch.tv/helix/moderation/chat?broadcaster_id=${channelId}&moderator_id=${botId}&message_id=${tags.id}`,
+                {
+                  method: "DELETE",
+                  headers: {
+                    "Client-Id": CLIENT_ID,
+                    Authorization: `Bearer ${OAUTH_TOKEN}`,
+                  },
+                },
+              );
+              if (resp.status === 204) {
+                console.log("[INFO] Сообщение удалено");
+                await logDeletedMessage(
+                  displayName,
+                  message,
+                  banned.word,
+                  banned.type,
+                );
+              }
+            } catch (e) {}
+          }
+          return;
+        }
+      } catch (e) {
+        console.error("[ERROR] Ошибка обработки банвордов:", e.message || e);
+      }
+
+      if (!message.startsWith("!")) return;
+      const args = message.slice(1).split(" ");
+      const cmdName = args.shift().toLowerCase();
+      const fullCmd = `!${cmdName}`;
+      const commands = await loadCommands();
+
+      let config = commands[fullCmd];
+
+      if (!config) {
+        for (const [key, cmd] of Object.entries(commands)) {
+          if (cmd.aliases && cmd.aliases.includes(fullCmd)) {
+            config = cmd;
+            break;
+          }
         }
       }
-    }
 
-    if (!config || config.enabled === false) return;
-    if (!hasPermission(tags, config.permissions)) return;
+      if (!config || config.enabled === false) return;
+      if (!hasPermission(tags, config.permissions)) return;
 
-    const extraVars = { user: displayName, message: args.join(" ") };
-    await executeAction(
-      config,
-      channel,
-      displayName,
-      args[0] || undefined,
-      extraVars,
-      config.name || fullCmd,
-    );
-  });
+      const extraVars = { user: displayName, message: args.join(" ") };
+      await executeAction(
+        config,
+        channel,
+        displayName,
+        args[0] || undefined,
+        extraVars,
+        config.name || fullCmd,
+      );
+    });
+  }
+}
+
+if (tokensValid) {
+  initializeBot();
 } else {
   console.log(
     "[INFO] IRC, EventSub и таймеры не запущены (токены не настроены)",
