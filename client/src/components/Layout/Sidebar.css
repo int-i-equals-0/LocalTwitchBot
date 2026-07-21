@@ -1,0 +1,92 @@
+/* client/src/components/Layout/Sidebar.css */
+
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h1 {
+  font-size: 20px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.sidebar-subtitle {
+  font-size: 12px;
+  margin: 8px 0;
+  color: var(--text-muted);
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+}
+
+.sidebar-btn:hover {
+  background: var(--bg-hover);
+  border-color: transparent;
+}
+
+.sidebar-btn.active {
+  background: var(--accent-light);
+  border: 1px solid var(--accent);
+}
+
+.sidebar-btn-icon {
+  font-size: 24px;
+  color: var(--text-muted);
+}
+
+.sidebar-btn.active .sidebar-btn-icon {
+  color: var(--accent);
+}
+
+.sidebar-btn-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.sidebar-btn.active .sidebar-btn-label {
+  color: var(--accent);
+}
+
+.sidebar-header .config-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-header .config-btn {
+  width: 100%;
+  justify-content: center;
+}
