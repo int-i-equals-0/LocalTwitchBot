@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Tooltip from '../../Tooltip';
+import VariableBadge from '../VariableBadge';
 import { useNotification, NOTIFICATION_TYPES } from '../../Notification';
 import { FONT_FAMILIES, TEXT_ANIMATIONS } from './utils';
 import './MediaEditor.css';
@@ -54,8 +55,11 @@ function TextOverlaySettings({ text = {}, onChange }) {
               <span>📌 Доступные переменные:</span>
             </div>
             <div className="text-vars-badges">
-              <code className="text-var-badge">{'{user}'}</code>
-              <span className="text-var-note">— имя пользователя</span>
+              <VariableBadge
+                name="user"
+                className="text-var-badge"
+                description="Пользователь, связанный с командой, событием или наградой, которая показывает это медиа."
+              />
             </div>
           </div>
 

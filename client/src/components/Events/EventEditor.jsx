@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { FaSave } from 'react-icons/fa';
 import ResponseEditor from '../Common/ResponseEditor';
+import VariableBadge from '../Common/VariableBadge';
 import './EventsTab.css';
 
 function EventEditor({ eventType, config, meta, onUpdate, overlays = [] }) {
@@ -54,7 +55,7 @@ function EventEditor({ eventType, config, meta, onUpdate, overlays = [] }) {
           <div className="event-vars">
             <span className="vars-label">Доступные переменные:</span>
             {meta.vars.map(v => (
-              <code key={v} className="var-badge">{`{${v}}`}</code>
+              <VariableBadge key={v} name={v} className="var-badge" />
             ))}
           </div>
         </div>

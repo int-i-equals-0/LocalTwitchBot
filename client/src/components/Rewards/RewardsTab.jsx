@@ -5,6 +5,7 @@ import { FaPlus, FaTrash, FaPowerOff, FaEdit, FaSync } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import RewardEditor from './RewardEditor';
 import RewardSelector from './RewardSelector';
+import { VariableBadges } from '../Common/VariableBadge';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './RewardsTab.css';
 
@@ -158,7 +159,15 @@ function RewardsTab({ rewards, onUpdate, overlays = [] }) {
         <h2>🎁 Награды за баллы канала</h2>
         <p className="rewards-description">
           Настройте реакции бота на использование наград за баллы канала.
-          Можно использовать переменные: {'{user}'} — имя активировавшего, {'{message}'} — введённый текст.
+          Можно использовать переменные:
+          <VariableBadges
+            className="inline-variable-list"
+            variables={['user', 'message']}
+            descriptions={{
+              user: 'Пользователь, активировавший награду за баллы канала.',
+              message: 'Текст, который пользователь ввёл при активации награды.',
+            }}
+          />
         </p>
         
         <div className="eventsub-status-bar">

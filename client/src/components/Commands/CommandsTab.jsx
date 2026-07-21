@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FaPlus, FaTrash, FaPowerOff, FaEdit } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import CommandEditor from './CommandEditor';
+import { VariableBadges } from '../Common/VariableBadge';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './CommandsTab.css';
 
@@ -129,7 +130,15 @@ function CommandsTab({ commands, onUpdate, overlays = [] }) {
         <h2>🤖 Команды чата</h2>
         <p className="commands-description">
           Настройте команды, которые бот будет выполнять в чате. 
-          Можно использовать переменные: {'{user}'} — имя автора, {'{target}'} — первый аргумент.
+          Можно использовать переменные:
+          <VariableBadges
+            className="inline-variable-list"
+            variables={['user', 'target']}
+            descriptions={{
+              user: 'Пользователь, который вызвал команду.',
+              target: 'Первый аргумент после команды.',
+            }}
+          />
         </p>
         <button className="create-command-btn" onClick={openCreateModal}>
           <FaPlus /> Создать команду

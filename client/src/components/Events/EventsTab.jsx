@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { FaPowerOff, FaEdit, FaPlay } from 'react-icons/fa';
 import Modal from '../Common/Modal';
 import EventEditor from './EventEditor';
+import { VariableBadges } from '../Common/VariableBadge';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './EventsTab.css';
 
@@ -100,7 +101,12 @@ function EventsTab({ events, onUpdate, overlays = [] }) {
       <div className="events-header">
         <h2>🎉 События Twitch</h2>
         <p className="events-description">
-          Настройте реакции бота на события Twitch. Используйте переменные вроде {'{user}'}, {'{tier}'}, {'{viewers}'}, {'{streakCount}'} в текстах.
+          Настройте реакции бота на события Twitch. Используйте переменные вроде
+          <VariableBadges
+            className="inline-variable-list"
+            variables={['user', 'tier', 'viewers', 'streakCount']}
+          />
+          в текстах.
         </p>
       </div>
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FaPlus, FaSync, FaArrowRight } from 'react-icons/fa';
+import VariableBadge from '../Common/VariableBadge';
 import './RewardsTab.css';
 
 function RewardSelector({ channelRewards, existingRewards, loadingRewards, onRefreshRewards, onRewardSelected, onCancel }) {
@@ -74,7 +75,14 @@ function RewardSelector({ channelRewards, existingRewards, loadingRewards, onRef
             <div className="reward-preview">
               <strong>Информация:</strong>
               {channelRewards.find(r => r.id === selectedRewardId)?.requiresInput && (
-                <p className="reward-hint">📝 Эта награда требует ввод текста. Переменная {'{message}'} будет подставлена.</p>
+                <p className="reward-hint">
+                  📝 Эта награда требует ввод текста. Переменная
+                  <VariableBadge
+                    name="message"
+                    description="Текст, который пользователь ввёл при активации награды."
+                  />
+                  будет подставлена.
+                </p>
               )}
             </div>
           </div>

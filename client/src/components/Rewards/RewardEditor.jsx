@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FaSave, FaPlus } from "react-icons/fa";
 import ResponseEditor from "../Common/ResponseEditor";
+import { VariableBadges } from "../Common/VariableBadge";
 import "./RewardsTab.css";
 
 function RewardEditor({ reward, onUpdate, overlays = [], isNew = false }) {
@@ -41,8 +42,15 @@ function RewardEditor({ reward, onUpdate, overlays = [], isNew = false }) {
           <code className="reward-id-value">{reward.rewardId}</code>
         </div>
         <p className="reward-vars-hint">
-          💡 Доступные переменные: {"{user}"} — имя пользователя, {"{message}"}{" "}
-          — введённый текст
+          💡 Доступные переменные:
+          <VariableBadges
+            className="inline-variable-list"
+            variables={["user", "message"]}
+            descriptions={{
+              user: "Пользователь, активировавший награду за баллы канала.",
+              message: "Текст, который пользователь ввёл при активации награды.",
+            }}
+          />
         </p>
       </div>
 
