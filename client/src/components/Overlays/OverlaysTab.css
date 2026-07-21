@@ -191,6 +191,117 @@
   background: var(--accent-hover);
 }
 
+.obs-integration-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.obs-integration-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.obs-integration-title h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.obs-integration-description {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 760px;
+}
+
+.obs-toggle-row {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+
+.obs-integration-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.obs-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.obs-status-badge.enabled {
+  background: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.obs-status-badge.disabled {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.obs-meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.obs-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.obs-meta-label {
+  color: var(--text-muted);
+}
+
+.obs-meta-item code {
+  color: var(--info);
+  font-family: monospace;
+}
+
+.obs-hint {
+  background: var(--bg-tertiary);
+  border-left: 3px solid var(--info);
+  border-radius: var(--border-radius-sm);
+  padding: 12px 14px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.obs-hint code {
+  color: var(--info);
+  font-family: monospace;
+}
+
 @media (max-width: 768px) {
   .overlay-card-fields {
     flex-direction: column;
@@ -213,5 +324,24 @@
   .overlay-action-btn {
     width: 100%;
     justify-content: center;
+  }
+  
+  .obs-integration-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .obs-toggle-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .obs-meta-list {
+    flex-direction: column;
+  }
+
+  .obs-meta-item {
+    width: 100%;
+    justify-content: space-between;
   }
 }

@@ -27,6 +27,11 @@ const EVENT_TYPES = {
     description: 'Срабатывает когда кто-то дарит подписки', 
     vars: ['user', 'tier', 'total', 'isAnonymous'] 
   },
+  bits: {
+    label: '💎 Bits / Cheer',
+    description: 'Срабатывает, когда кто-то отправляет Bits (cheer) в чат канала',
+    vars: ['user', 'bits', 'message', 'isAnonymous']
+  },
   raid: { 
     label: '🏴‍☠️ Рейд', 
     description: 'Срабатывает при входящем рейде на канал', 

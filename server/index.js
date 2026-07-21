@@ -1575,6 +1575,7 @@ async function checkBotPermissions() {
           "channel:read:redemptions",
           "moderator:read:shoutouts",
           "moderator:manage:shoutouts",
+          "bits:read",
         ];
 
         console.log("[START] Проверка прав стримера:");
@@ -2258,6 +2259,23 @@ async function handleEventSubNotification(data) {
       total: String(total),
       isAnonymous: event.is_anonymous ? "true" : "false",
     });
+  } else if (subscriptionType === "channel.cheer") {
+    const username = event.is_anonymous ? "Аноним" : event.user_name || "Someone";
+    const bits = event.bits || 0;
+    const message = event.message || "";
+
+    console.log(
+      `[INFO] Bits/cheer: ${username} отправил ${bits} bits${message ? `: "${message}"` : ""}`,
+    );
+
+    await handleEvent("bits", {
+      username,
+      user: username,
+      bits: String(bits),
+      message,
+      isAnonymous: event.is_anonymous ? "true" : "false",
+      userId: event.user_id || "",
+    });
   } else if (subscriptionType === "channel.raid") {
     const fromUser = event.from_broadcaster_user_name;
     const viewers = event.viewers;
@@ -2313,6 +2331,12 @@ async function subscribeToAllEvents() {
     },
     {
       type: "channel.subscription.gift",
+      version: "1",
+      condition: { broadcaster_user_id: channelId },
+      token: broadcasterToken,
+    },
+    {
+      type: "channel.cheer",
       version: "1",
       condition: { broadcaster_user_id: channelId },
       token: broadcasterToken,
@@ -2875,7 +2899,7 @@ app.get("/api/auth/twitch/broadcaster", (req, res) => {
     `&redirect_uri=${REDIRECT_URI}` +
     `&response_type=code` +
     `&force_verify=true` +
-    `&scope=moderator:read:followers%20channel:read:subscriptions%20channel:read:redemptions%20moderator:read:shoutouts%20moderator:manage:shoutouts` +
+    `&scope=moderator:read:followers%20channel:read:subscriptions%20channel:read:redemptions%20moderator:read:shoutouts%20moderator:manage:shoutouts%20bits:read` +
     `&state=${state}`;
 
   res.json({ url: authUrl });
@@ -3567,6 +3591,14 @@ app.post("/api/events/:eventType/test", async (req, res) => {
       tierRaw: "1000",
       total: "5",
       isAnonymous: "false",
+    },
+    bits: {
+      username: "TestCheerer",
+      user: "TestCheerer",
+      bits: "250",
+      message: "Держи битсы!",
+      isAnonymous: "false",
+      userId: "12345",
     },
     raid: {
       username: "TestRaider",

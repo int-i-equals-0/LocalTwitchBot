@@ -34,6 +34,8 @@ function EventEditor({ eventType, config, meta, onUpdate, overlays = [] }) {
         return 'Продление подписки';
       case 'giftSub':
         return 'Подарочная подписка';
+      case 'bits':
+        return 'Bits / Cheer';
       case 'raid':
         return 'Рейд';
       default:

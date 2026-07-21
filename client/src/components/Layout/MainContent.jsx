@@ -17,6 +17,8 @@ function MainContent({
   setTokens,
   overlays,
   setOverlays,
+  obs,
+  setObs,
   commands,
   setCommands,
   rewards,
@@ -47,6 +49,8 @@ function MainContent({
             key={`overlays-${configVersion}`}
             overlays={overlays}
             onUpdate={setOverlays}
+            obs={obs}
+            onObsUpdate={setObs}
           />
         );
       case 'commands':

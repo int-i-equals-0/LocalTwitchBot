@@ -1,15 +1,33 @@
 // client/src/components/Overlays/OverlaysTab.jsx
 
 import { useState } from 'react';
-import { FaPlus, FaTrash, FaCopy, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaCopy, FaExternalLinkAlt, FaPlug } from 'react-icons/fa';
 import Tooltip from '../Tooltip';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './OverlaysTab.css';
 
-function OverlaysTab({ overlays = [], onUpdate }) {
+const OBS_DEFAULTS = {
+  enabled: false,
+  url: 'ws://127.0.0.1:4455',
+  password: '',
+  autoRefresh: true,
+  browserSources: [],
+};
+
+function OverlaysTab({
+  overlays = [],
+  onUpdate,
+  obs = {},
+  onObsUpdate,
+}) {
   const { showNotification, showConfirm } = useNotification();
   const [newName, setNewName] = useState('');
   const [newPath, setNewPath] = useState('');
+
+  const obsConfig = {
+    ...OBS_DEFAULTS,
+    ...(obs || {}),
+  };
 
   const sanitizePath = (input) => {
     return input
@@ -21,6 +39,108 @@ function OverlaysTab({ overlays = [], onUpdate }) {
 
   const generateId = () => {
     return 'overlay_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+  };
+
+  const buildDefaultObsInputName = (overlayName) => {
+    const trimmed = String(overlayName || '').trim();
+    return trimmed ? `Overlay ${trimmed}` : 'Overlay';
+  };
+
+  const addObsBrowserSourceMapping = (overlay) => {
+    if (!onObsUpdate) return;
+
+    const currentSources = Array.isArray(obsConfig.browserSources)
+      ? obsConfig.browserSources
+      : [];
+
+    if (currentSources.some((s) => s.overlayPath === overlay.path)) return;
+
+    updateObsConfig({
+      browserSources: [
+        ...currentSources,
+        {
+          overlayPath: overlay.path,
+          inputName: buildDefaultObsInputName(overlay.name),
+        },
+      ],
+    });
+  };
+
+  const removeObsBrowserSourceMapping = (overlayPath) => {
+    if (!onObsUpdate) return;
+
+    const currentSources = Array.isArray(obsConfig.browserSources)
+      ? obsConfig.browserSources
+      : [];
+
+    updateObsConfig({
+      browserSources: currentSources.filter((s) => s.overlayPath !== overlayPath),
+    });
+  };
+
+  const updateObsBrowserSourceOverlayPath = (oldPath, newPath, overlayName) => {
+    if (!onObsUpdate || !newPath) return;
+
+    const currentSources = Array.isArray(obsConfig.browserSources)
+      ? obsConfig.browserSources
+      : [];
+
+    const existingIndex = currentSources.findIndex((s) => s.overlayPath === oldPath);
+
+    if (existingIndex !== -1) {
+      const nextSources = [...currentSources];
+      nextSources[existingIndex] = {
+        ...nextSources[existingIndex],
+        overlayPath: newPath,
+      };
+
+      updateObsConfig({
+        browserSources: nextSources,
+      });
+      return;
+    }
+
+    if (!currentSources.some((s) => s.overlayPath === newPath)) {
+      updateObsConfig({
+        browserSources: [
+          ...currentSources,
+          {
+            overlayPath: newPath,
+            inputName: buildDefaultObsInputName(overlayName),
+          },
+        ],
+      });
+    }
+  };
+
+  const updateObsConfig = (patch) => {
+    if (!onObsUpdate) {
+      showNotification(
+        '⚠️ Сохранение OBS-настроек пока не подключено в родительском компоненте',
+        NOTIFICATION_TYPES.WARNING,
+        3000
+      );
+      return;
+    }
+
+    onObsUpdate({
+      ...OBS_DEFAULTS,
+      ...(obs || {}),
+      ...patch,
+    });
+  };
+
+  const toggleObsEnabled = () => {
+    const newValue = !obsConfig.enabled;
+    updateObsConfig({ enabled: newValue });
+
+    showNotification(
+      newValue
+        ? '✅ Интеграция с OBS / Streamlabs включена'
+        : '⚪ Интеграция с OBS / Streamlabs отключена',
+      newValue ? NOTIFICATION_TYPES.SUCCESS : NOTIFICATION_TYPES.INFO,
+      2000
+    );
   };
 
   const addOverlay = () => {
@@ -48,6 +168,8 @@ function OverlaysTab({ overlays = [], onUpdate }) {
     };
 
     onUpdate([...overlays, newOverlay]);
+    addObsBrowserSourceMapping(newOverlay);
+
     setNewName('');
     setNewPath('');
     showNotification(`✅ Оверлей "${newOverlay.name}" создан`, NOTIFICATION_TYPES.SUCCESS, 2000);
@@ -58,6 +180,7 @@ function OverlaysTab({ overlays = [], onUpdate }) {
       `Удалить оверлей "${overlay.name}"?\n\nВсе команды, привязанные к этому оверлею, будут отправляться на все оверлеи.`,
       () => {
         onUpdate(overlays.filter(o => o.id !== overlay.id));
+        removeObsBrowserSourceMapping(overlay.path);
         showNotification(`🗑️ Оверлей "${overlay.name}" удалён`, NOTIFICATION_TYPES.WARNING, 2000);
       }
     );
@@ -82,11 +205,22 @@ function OverlaysTab({ overlays = [], onUpdate }) {
 
   const updateOverlayPath = (id, newPath) => {
     const sanitized = sanitizePath(newPath);
+    const currentOverlay = overlays.find(o => o.id === id);
+
+    if (!currentOverlay) return;
+
+    if (!sanitized) {
+      showNotification('⚠️ Адрес оверлея не может быть пустым', NOTIFICATION_TYPES.WARNING, 2000);
+      return;
+    }
+
     if (overlays.some(o => o.id !== id && o.path === sanitized)) {
       showNotification('❌ Такой адрес уже занят', NOTIFICATION_TYPES.ERROR, 2000);
       return;
     }
+
     onUpdate(overlays.map(o => o.id === id ? { ...o, path: sanitized } : o));
+    updateObsBrowserSourceOverlayPath(currentOverlay.path, sanitized, currentOverlay.name);
   };
 
   const getLocalIP = () => {
@@ -98,9 +232,70 @@ function OverlaysTab({ overlays = [], onUpdate }) {
       <div className="overlays-header">
         <h2>🖥️ Оверлеи</h2>
         <p className="overlays-description">
-          Оверлеи — это веб-страницы, которые вы добавляете как источники в OBS. 
+          Оверлеи — это веб-страницы, которые вы добавляете как источники в OBS.
           Каждый оверлей получает свой уникальный URL и может принимать медиа отдельно.
         </p>
+      </div>
+
+      <div className="obs-integration-card">
+        <div className="obs-integration-header">
+          <div className="obs-integration-title">
+            <h3>
+              <FaPlug /> OBS / Streamlabs WebSocket
+            </h3>
+            <p className="obs-integration-description">
+              Если включено, бот сможет автоматически попытаться обновить Browser Source,
+              когда OBS или Streamlabs были запущены раньше сервера.
+            </p>
+          </div>
+
+          <label className="toggle-label obs-toggle-row">
+            <span className="toggle-text">
+              {obsConfig.enabled ? 'Включено' : 'Выключено'}
+            </span>
+            <span className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={!!obsConfig.enabled}
+                onChange={toggleObsEnabled}
+              />
+              <span className="toggle-slider"></span>
+            </span>
+          </label>
+        </div>
+
+        <div className="obs-integration-body">
+          <div className={`obs-status-badge ${obsConfig.enabled ? 'enabled' : 'disabled'}`}>
+            {obsConfig.enabled
+              ? '✅ Интеграция активна'
+              : '⚪ Интеграция отключена'}
+          </div>
+
+          <div className="obs-meta-list">
+            <div className="obs-meta-item">
+              <span className="obs-meta-label">URL WebSocket:</span>
+              <code>{obsConfig.url || OBS_DEFAULTS.url}</code>
+            </div>
+
+            <div className="obs-meta-item">
+              <span className="obs-meta-label">Автообновление Browser Source:</span>
+              <span>{obsConfig.autoRefresh === false ? 'выключено' : 'включено'}</span>
+            </div>
+
+            <div className="obs-meta-item">
+              <span className="obs-meta-label">Привязок Browser Source:</span>
+              <span>{Array.isArray(obsConfig.browserSources) ? obsConfig.browserSources.length : 0}</span>
+            </div>
+          </div>
+
+          <div className="obs-hint">
+            <strong>Важно:</strong> этот переключатель управляет только полем
+            <code> obs.enabled </code>
+            в конфиге. Остальные OBS-настройки
+            (<code>url</code>, <code>password</code>, <code>browserSources</code>)
+            пока редактируются вручную в <code>config.json</code>.
+          </div>
+        </div>
       </div>
 
       <div className="overlays-list">
@@ -138,13 +333,13 @@ function OverlaysTab({ overlays = [], onUpdate }) {
                 </div>
               </div>
             </div>
-            
+
             <div className="overlay-card-url">
               <span className="overlay-url">
                 http://{getLocalIP()}:3001/overlay/{overlay.path}
               </span>
             </div>
-            
+
             <div className="overlay-card-actions">
               <button onClick={() => copyUrl(overlay)} className="overlay-action-btn copy">
                 <FaCopy /> Копировать URL
