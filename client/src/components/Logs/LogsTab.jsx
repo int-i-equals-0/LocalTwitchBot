@@ -5,6 +5,14 @@ import { FaTrash, FaPause, FaPlay, FaDownload, FaFilter, FaSearch } from 'react-
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './LogsTab.css';
 
+const LOG_WS_PORT = 8081;
+
+function getLogWebSocketUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const hostname = window.location.hostname || '127.0.0.1';
+  return `${protocol}//${hostname}:${LOG_WS_PORT}`;
+}
+
 function LogsTab() {
   const { showNotification } = useNotification();
   const [logs, setLogs] = useState([]);
@@ -16,6 +24,8 @@ function LogsTab() {
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const pausedRef = useRef(false);
+  const shouldReconnectRef = useRef(true);
+  const connectionAttemptRef = useRef(0);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   useEffect(() => {
@@ -39,9 +49,21 @@ function LogsTab() {
     }
 
     try {
-      wsRef.current = new WebSocket('ws://localhost:8081');
+      const attemptId = connectionAttemptRef.current + 1;
+      connectionAttemptRef.current = attemptId;
+      const ws = new WebSocket(getLogWebSocketUrl());
+      wsRef.current = ws;
+      let opened = false;
 
-      wsRef.current.onopen = () => {
+      const isCurrentConnection = () => (
+        shouldReconnectRef.current &&
+        wsRef.current === ws &&
+        connectionAttemptRef.current === attemptId
+      );
+
+      ws.onopen = () => {
+        if (!isCurrentConnection()) return;
+        opened = true;
         setConnectionStatus('connected');
         showNotification('🔌 WebSocket подключен к серверу логов', NOTIFICATION_TYPES.SUCCESS, 2000);
         if (reconnectTimerRef.current) {
@@ -50,7 +72,8 @@ function LogsTab() {
         }
       };
 
-      wsRef.current.onmessage = (event) => {
+      ws.onmessage = (event) => {
+        if (!isCurrentConnection()) return;
         if (!pausedRef.current) {
           try {
             const logData = JSON.parse(event.data);
@@ -74,12 +97,17 @@ function LogsTab() {
         }
       };
 
-      wsRef.current.onerror = () => {
+      ws.onerror = () => {
+        if (!isCurrentConnection()) return;
+        if (opened) return;
         setConnectionStatus('error');
         showNotification('❌ Ошибка WebSocket соединения', NOTIFICATION_TYPES.ERROR, 3000);
       };
 
-      wsRef.current.onclose = () => {
+      ws.onclose = () => {
+        if (!isCurrentConnection()) return;
+        wsRef.current = null;
+
         setConnectionStatus('disconnected');
         showNotification('🔌 WebSocket отключен, попытка переподключения...', NOTIFICATION_TYPES.WARNING, 3000);
         if (!reconnectTimerRef.current) {
@@ -117,10 +145,23 @@ function LogsTab() {
   }, [filteredLogs, autoScroll]);
 
   useEffect(() => {
+    shouldReconnectRef.current = true;
     connectWebSocket();
     return () => {
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      shouldReconnectRef.current = false;
+      connectionAttemptRef.current += 1;
+      if (wsRef.current) {
+        wsRef.current.onopen = null;
+        wsRef.current.onmessage = null;
+        wsRef.current.onerror = null;
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
     };
   }, [connectWebSocket]);
   

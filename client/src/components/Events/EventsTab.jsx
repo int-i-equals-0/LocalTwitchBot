@@ -36,6 +36,11 @@ const EVENT_TYPES = {
     label: '🏴‍☠️ Рейд', 
     description: 'Срабатывает при входящем рейде на канал', 
     vars: ['user', 'viewers'] 
+  },
+  watchStreak: {
+    label: '🔥 Watch Streak',
+    description: 'Срабатывает, когда зритель делится серией просмотренных стримов подряд',
+    vars: ['user', 'streakCount', 'channelPointsAwarded', 'systemMessage', 'message']
   }
 };
 
@@ -95,7 +100,7 @@ function EventsTab({ events, onUpdate, overlays = [] }) {
       <div className="events-header">
         <h2>🎉 События Twitch</h2>
         <p className="events-description">
-          Настройте реакции бота на события Twitch. Используйте переменные вроде {'{user}'}, {'{tier}'}, {'{viewers}'} в текстах.
+          Настройте реакции бота на события Twitch. Используйте переменные вроде {'{user}'}, {'{tier}'}, {'{viewers}'}, {'{streakCount}'} в текстах.
         </p>
       </div>
 

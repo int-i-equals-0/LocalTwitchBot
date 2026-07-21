@@ -33,6 +33,12 @@ function getLocalIP() {
 // ========== КОНСТАНТЫ ==========
 const CONFIG_PATH = path.join(__dirname, "config.json");
 const SHOUTOUT_COOLDOWN_MS = 125000;
+const SHOUTOUT_RAID_MODES = new Set(["none", "listed", "unlisted", "all"]);
+const SHOUTOUT_SOURCE_LABELS = {
+  message: "сообщение",
+  raid: "рейд",
+  manual: "ручной запуск",
+};
 const VIEWERS_CACHE_TTL = 60000;
 const MAX_RECENT = 200;
 const SERVER_START_TIME = Date.now();
@@ -40,6 +46,7 @@ const OVERLAY_STARTUP_CHECK_DELAY_MS = 15000;
 const OVERLAY_MONITOR_INTERVAL_MS = 15000;
 const OBS_REFRESH_RETRY_INTERVAL_MS = 30000;
 const OBS_MAX_REFRESH_ATTEMPTS = 5;
+const LOG_WS_PORT = 8081;
 
 // ========== ЛОГИРОВАНИЕ В ФАЙЛЫ ==========
 const LOGS_DIR = path.join(__dirname, "logs");
@@ -180,7 +187,10 @@ async function processRewardBuffer() {
   for (const reward of bufferCopy) {
     // Проверяем, не слишком ли старая награда
     if (Date.now() - reward.timestamp < EVENTSUB_SETTINGS.BUFFER_TIMEOUT) {
-      await handleReward(reward.rewardId, reward.username, reward.userMessage);
+      await handleReward(reward.rewardId, reward.username, reward.userMessage, {
+        eventId: reward.eventId,
+        source: "eventsub",
+      });
       processedCount++;
     } else {
       console.log(
@@ -195,8 +205,13 @@ async function processRewardBuffer() {
   );
 }
 
-const shoutoutDone = new Set();
+const shoutoutDoneBySource = {
+  message: new Set(),
+  raid: new Set(),
+};
 const shoutoutQueue = [];
+let shoutoutQueueNextId = 1;
+let shoutoutCurrentItemId = null;
 let shoutoutCooldownUntil = 0;
 let shoutoutProcessing = false;
 
@@ -212,7 +227,7 @@ let obsRefreshTimer = null;
 let obsAutoRefreshDone = false;
 
 // ========== ЛОГИРОВАНИЕ ==========
-const logWss = new WebSocket.Server({ port: 8081 });
+const logWss = new WebSocket.Server({ port: LOG_WS_PORT, host: "0.0.0.0" });
 const logClients = new Set();
 
 logWss.on("connection", (ws) => {
@@ -257,6 +272,8 @@ console.warn = function (...a) {
   writeToLogFile("WARN", m);
   origWarn.apply(console, a);
 };
+
+console.log(`[START] Вебсокет для логов: ws://${getLocalIP()}:${LOG_WS_PORT}`);
 
 // ========== РАБОТА С КОНФИГОМ ==========
 let botFullyReady = false;
@@ -316,6 +333,8 @@ function loadFullConfig() {
       if (!configData.overlays) configData.overlays = [];
       if (!configData.rewards) configData.rewards = {};
       if (!configData.autoshoutout) configData.autoshoutout = [];
+      if (!configData.shoutoutSettings)
+        configData.shoutoutSettings = { raidMode: "none" };
       if (!configData.events) configData.events = {};
       if (!configData.notes) configData.notes = [];
       if (!configData.obs)
@@ -339,6 +358,7 @@ function loadFullConfig() {
     overlays: [],
     rewards: {},
     autoshoutout: [],
+    shoutoutSettings: { raidMode: "none" },
     events: {},
     notes: [],
     obs: {
@@ -489,7 +509,13 @@ async function validateToken(token) {
 
     if (response.ok) {
       const data = await response.json();
-      return { valid: true, expiresIn: data.expires_in };
+      return {
+        valid: true,
+        expiresIn: data.expires_in,
+        login: data.login,
+        userId: data.user_id,
+        scopes: data.scopes || [],
+      };
     }
 
     return { valid: false };
@@ -1348,6 +1374,19 @@ function loadAutoShoutout() {
     return [];
   }
 }
+function normalizeShoutoutSettings(settings) {
+  const raidMode = settings?.raidMode;
+  return {
+    raidMode: SHOUTOUT_RAID_MODES.has(raidMode) ? raidMode : "none",
+  };
+}
+function loadShoutoutSettings() {
+  try {
+    return normalizeShoutoutSettings(loadFullConfig().shoutoutSettings);
+  } catch (e) {
+    return normalizeShoutoutSettings();
+  }
+}
 function loadPeriodicEvents() {
   try {
     return loadFullConfig().periodicEvents || {};
@@ -1576,6 +1615,7 @@ async function checkBotPermissions() {
           "moderator:read:shoutouts",
           "moderator:manage:shoutouts",
           "bits:read",
+          "user:read:chat",
         ];
 
         console.log("[START] Проверка прав стримера:");
@@ -1779,11 +1819,86 @@ async function executeAction(
 
 // ========== ОБРАБОТКА НАГРАДЫ ==========
 const handledRewards = new Map();
+const REWARD_DEDUP_TTL_MS = 30000;
+const REWARD_CROSS_SOURCE_DEDUP_MS = 5000;
 
-function getDeduplicationKey(rewardId, username, timestamp) {
-  // Округляем до десятых долей секунды (100 мс)
-  const roundedTime = Math.floor(timestamp / 100) * 100;
-  return `${rewardId}:${username}:${roundedTime}`;
+function normalizeRewardDedupValue(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getRewardFingerprint(rewardId, username, userMessage) {
+  return [
+    "fingerprint",
+    rewardId,
+    normalizeRewardDedupValue(username),
+    normalizeRewardDedupValue(userMessage),
+  ].join(":");
+}
+
+function getRewardEventKey(eventId) {
+  return eventId ? `event:${eventId}` : null;
+}
+
+function getHandledRewardTimestamp(record) {
+  if (!record) return 0;
+  if (typeof record === "number") return record;
+  return record.timestamp || 0;
+}
+
+function rememberHandledReward(key, timestamp, source) {
+  if (!key) return;
+
+  const existing = handledRewards.get(key);
+  const sources =
+    existing && existing.sources instanceof Set
+      ? new Set(existing.sources)
+      : new Set();
+
+  if (source) sources.add(source);
+  handledRewards.set(key, { timestamp, sources });
+}
+
+function getRewardDuplicateInfo(rewardId, username, userMessage, options, now) {
+  const source = options.source || "unknown";
+  const eventKey = getRewardEventKey(options.eventId);
+
+  if (eventKey) {
+    const eventRecord = handledRewards.get(eventKey);
+    const eventTimestamp = getHandledRewardTimestamp(eventRecord);
+    if (eventTimestamp && now - eventTimestamp < REWARD_DEDUP_TTL_MS) {
+      return {
+        duplicate: true,
+        reason: "redemption id уже обработан",
+        age: now - eventTimestamp,
+      };
+    }
+  }
+
+  const fingerprintKey = getRewardFingerprint(rewardId, username, userMessage);
+  const fingerprintRecord = handledRewards.get(fingerprintKey);
+  const fingerprintTimestamp = getHandledRewardTimestamp(fingerprintRecord);
+  const fingerprintSources =
+    fingerprintRecord && fingerprintRecord.sources instanceof Set
+      ? fingerprintRecord.sources
+      : new Set();
+
+  if (
+    fingerprintTimestamp &&
+    now - fingerprintTimestamp < REWARD_CROSS_SOURCE_DEDUP_MS &&
+    !fingerprintSources.has(source)
+  ) {
+    return {
+      duplicate: true,
+      reason: `уже обработано через ${[...fingerprintSources].join(", ") || "другой источник"}`,
+      age: now - fingerprintTimestamp,
+    };
+  }
+
+  return {
+    duplicate: false,
+    eventKey,
+    fingerprintKey,
+  };
 }
 
 // Периодическая очистка старых записей (каждые 10 секунд)
@@ -1791,9 +1906,8 @@ setInterval(() => {
   const now = Date.now();
   let cleanedCount = 0;
 
-  for (const [key, time] of handledRewards.entries()) {
-    if (now - time > 30000) {
-      // 30 секунд
+  for (const [key, record] of handledRewards.entries()) {
+    if (now - getHandledRewardTimestamp(record) > REWARD_DEDUP_TTL_MS) {
       handledRewards.delete(key);
       cleanedCount++;
     }
@@ -1806,28 +1920,36 @@ setInterval(() => {
   }
 }, 10000); // Проверяем каждые 10 секунд
 
-async function handleReward(rewardId, username, userMessage) {
+async function handleReward(rewardId, username, userMessage, options = {}) {
   const now = Date.now();
-  const dedupKey = getDeduplicationKey(rewardId, username, now);
+  const source = options.source || "unknown";
+  const duplicateInfo = getRewardDuplicateInfo(
+    rewardId,
+    username,
+    userMessage,
+    { ...options, source },
+    now,
+  );
 
-  // Проверка на дубликат (мёртвая зона 150 мс)
-  const lastHandled = handledRewards.get(dedupKey);
-  if (lastHandled && now - lastHandled < 150) {
+  if (duplicateInfo.duplicate) {
+    const eventKey = getRewardEventKey(options.eventId);
+    if (eventKey) rememberHandledReward(eventKey, now, source);
     console.log(
-      `[INFO] Награда ${rewardId} от ${username} — дубликат (${now - lastHandled}ms), пропуск`,
+      `[INFO] Награда ${rewardId} от ${username} — дубликат (${duplicateInfo.reason}, ${duplicateInfo.age}ms), пропуск`,
     );
     return true;
   }
 
   // Сохраняем запись о обработке
-  handledRewards.set(dedupKey, now);
+  rememberHandledReward(duplicateInfo.eventKey, now, source);
+  rememberHandledReward(duplicateInfo.fingerprintKey, now, source);
 
   // Дополнительная очистка: если записей слишком много, принудительно чистим старые
   if (handledRewards.size > 500) {
-    const threshold = now - 30000;
+    const threshold = now - REWARD_DEDUP_TTL_MS;
     let cleanedCount = 0;
-    for (const [key, time] of handledRewards.entries()) {
-      if (time < threshold) {
+    for (const [key, record] of handledRewards.entries()) {
+      if (getHandledRewardTimestamp(record) < threshold) {
         handledRewards.delete(key);
         cleanedCount++;
       }
@@ -1892,7 +2014,10 @@ async function handleRewardWithBuffer(
     return true;
   }
 
-  return await handleReward(rewardId, username, userMessage);
+  return await handleReward(rewardId, username, userMessage, {
+    eventId,
+    source: "eventsub",
+  });
 }
 
 // ========== ОБРАБОТКА СОБЫТИЙ ==========
@@ -2016,18 +2141,40 @@ async function processShoutoutQueue() {
       await new Promise((resolve) => setTimeout(resolve, waitMs + 500));
     }
 
-    const username = shoutoutQueue[0];
+    if (shoutoutQueue.length === 0) break;
 
-    console.log(`[INFO] Shoutout: отправка для ${username}...`);
+    const queueItem = shoutoutQueue[0];
+    const queueItemId = getQueueItemId(queueItem, 0);
+    const username =
+      typeof queueItem === "string" ? queueItem : queueItem.username;
+    const source =
+      typeof queueItem === "string" ? "message" : queueItem.source || "message";
+    const sourceLabel = SHOUTOUT_SOURCE_LABELS[source] || source;
+
+    console.log(`[INFO] Shoutout: отправка для ${username} (${sourceLabel})...`);
+    shoutoutCurrentItemId = queueItemId;
     const success = await sendShoutout(username);
+    if (shoutoutCurrentItemId === queueItemId) shoutoutCurrentItemId = null;
 
     if (success) {
-      shoutoutQueue.shift();
+      if (getQueueItemId(shoutoutQueue[0], 0) === queueItemId) {
+        shoutoutQueue.shift();
+      }
       shoutoutCooldownUntil = Date.now() + SHOUTOUT_COOLDOWN_MS;
       console.log(
         `[INFO] Shoutout для ${username} выполнен. В очереди: ${shoutoutQueue.length}`,
       );
     } else {
+      const stillQueued = shoutoutQueue.some(
+        (item, index) => getQueueItemId(item, index) === queueItemId,
+      );
+      if (!stillQueued) {
+        console.log(
+          `[INFO] Shoutout для ${username} не удался, но запись уже удалена из очереди`,
+        );
+        continue;
+      }
+
       console.warn(
         `[WARN] Shoutout для ${username} не удался, повтор через 30 сек`,
       );
@@ -2040,27 +2187,197 @@ async function processShoutoutQueue() {
   console.log("[INFO] Очередь shoutout пуста");
 }
 
-function queueShoutout(username) {
-  const lowerUsername = username.toLowerCase();
-  if (shoutoutDone.has(lowerUsername)) return;
+function getNormalizedUsername(username) {
+  return String(username || "").trim().toLowerCase();
+}
 
-  const autoList = loadAutoShoutout();
-  const isInList = autoList.some(
-    (name) => name.toLowerCase() === lowerUsername,
+function isAutoShoutoutListed(username) {
+  const lowerUsername = getNormalizedUsername(username);
+  if (!lowerUsername) return false;
+
+  return loadAutoShoutout().some(
+    (name) => getNormalizedUsername(name) === lowerUsername,
   );
-  if (!isInList) return;
+}
 
-  shoutoutDone.add(lowerUsername);
+function shouldShoutoutRaider(username) {
+  const lowerUsername = getNormalizedUsername(username);
+  if (!lowerUsername) return false;
 
-  if (shoutoutQueue.some((name) => name.toLowerCase() === lowerUsername))
-    return;
+  const mode = loadShoutoutSettings().raidMode;
+  const isInList = isAutoShoutoutListed(lowerUsername);
 
-  shoutoutQueue.push(username);
+  if (mode === "none") return false;
+  if (mode === "listed") return isInList;
+  if (mode === "unlisted") return !isInList;
+  if (mode === "all") return true;
+
+  return false;
+}
+
+function hasQueuedAutoShoutout(lowerUsername, source) {
+  return shoutoutQueue.some(
+    (item) =>
+      typeof item !== "string" &&
+      getNormalizedUsername(item.username) === lowerUsername &&
+      item.source === source,
+  );
+}
+
+function hasQueuedRaidShoutout(lowerUsername) {
+  return shoutoutQueue.some(
+    (item) =>
+      typeof item !== "string" &&
+      getNormalizedUsername(item.username) === lowerUsername &&
+      item.source === "raid",
+  );
+}
+
+function getDoneShoutoutUsers() {
+  return [
+    ...new Set([
+      ...shoutoutDoneBySource.message,
+      ...shoutoutDoneBySource.raid,
+    ]),
+  ];
+}
+
+function getDoneShoutoutDetails() {
+  const users = getDoneShoutoutUsers();
+  return users.map((username) => ({
+    username,
+    sources: Object.entries(shoutoutDoneBySource)
+      .filter(([, set]) => set.has(username))
+      .map(([source]) => source),
+  }));
+}
+
+function createShoutoutQueueItem(username, source) {
+  return {
+    id: shoutoutQueueNextId++,
+    username,
+    source,
+  };
+}
+
+function getQueueItemId(item, index) {
+  if (item && typeof item === "object" && item.id) return item.id;
+  return `legacy-${index}`;
+}
+
+function getQueueItemDetails(item, index) {
+  if (typeof item === "string") {
+    return {
+      id: getQueueItemId(item, index),
+      index,
+      username: item,
+      source: "message",
+    };
+  }
+
+  return {
+    id: getQueueItemId(item, index),
+    index,
+    username: item.username,
+    source: item.source || "message",
+  };
+}
+
+function getQueueDetails() {
+  return shoutoutQueue.map((item, index) => getQueueItemDetails(item, index));
+}
+
+function removeShoutoutQueueItem(itemId) {
+  const requestedId = String(itemId || "");
+  if (!requestedId) return { removed: null };
+
+  let index = shoutoutQueue.findIndex(
+    (item, itemIndex) => String(getQueueItemId(item, itemIndex)) === requestedId,
+  );
+
+  if (index === -1 && /^\d+$/.test(requestedId)) {
+    const requestedIndex = Number(requestedId);
+    if (requestedIndex >= 0 && requestedIndex < shoutoutQueue.length) {
+      index = requestedIndex;
+    }
+  }
+
+  if (index === -1) return { removed: null };
+
+  const details = getQueueItemDetails(shoutoutQueue[index], index);
+  if (String(details.id) === String(shoutoutCurrentItemId)) {
+    return { removed: null, inProgress: details };
+  }
+
+  shoutoutQueue.splice(index, 1);
   console.log(
-    `[INFO] ${username} добавлен в очередь shoutout (позиция: ${shoutoutQueue.length})`,
+    `[INFO] Shoutout: ${details.username} (${SHOUTOUT_SOURCE_LABELS[details.source] || details.source}) удалён из очереди`,
+  );
+  return { removed: details };
+}
+
+function queueManualShoutout(username) {
+  const lowerUsername = getNormalizedUsername(username);
+  if (!lowerUsername) return false;
+
+  if (
+    shoutoutQueue.some(
+      (item) => getNormalizedUsername(item.username || item) === lowerUsername,
+    )
+  ) {
+    return false;
+  }
+
+  shoutoutQueue.push(createShoutoutQueueItem(username, "manual"));
+  console.log(`[INFO] Ручной shoutout для ${username} добавлен в очередь`);
+  processShoutoutQueue();
+  return true;
+}
+
+function queueAutoShoutout(username, source = "message") {
+  const lowerUsername = getNormalizedUsername(username);
+  if (!lowerUsername) return false;
+
+  if (source === "message") {
+    if (!isAutoShoutoutListed(lowerUsername)) return false;
+    if (shoutoutDoneBySource.message.has(lowerUsername)) return false;
+    if (shoutoutDoneBySource.raid.has(lowerUsername)) return false;
+    if (hasQueuedAutoShoutout(lowerUsername, "message")) return false;
+    if (hasQueuedRaidShoutout(lowerUsername)) return false;
+  } else if (source === "raid") {
+    if (!shouldShoutoutRaider(lowerUsername)) return false;
+    if (shoutoutDoneBySource.raid.has(lowerUsername)) return false;
+    if (hasQueuedAutoShoutout(lowerUsername, "raid")) return false;
+  } else {
+    return false;
+  }
+
+  shoutoutDoneBySource[source].add(lowerUsername);
+
+  shoutoutQueue.push(createShoutoutQueueItem(username, source));
+  console.log(
+    `[INFO] ${username} добавлен в очередь shoutout (${SHOUTOUT_SOURCE_LABELS[source]}, позиция: ${shoutoutQueue.length})`,
   );
 
   processShoutoutQueue();
+  return true;
+}
+
+function queueShoutout(username) {
+  return queueAutoShoutout(username, "message");
+}
+
+function queueRaidShoutout(username) {
+  const queued = queueAutoShoutout(username, "raid");
+  if (!queued) {
+    const mode = loadShoutoutSettings().raidMode;
+    if (mode !== "none") {
+      console.log(
+        `[INFO] Raid shoutout для ${username} пропущен (режим: ${mode})`,
+      );
+    }
+    return;
+  }
 }
 
 // ========== TWITCH EVENTSUB WEBSOCKET ==========
@@ -2276,10 +2593,35 @@ async function handleEventSubNotification(data) {
       isAnonymous: event.is_anonymous ? "true" : "false",
       userId: event.user_id || "",
     });
+  } else if (subscriptionType === "channel.chat.notification") {
+    if (event.notice_type === "watch_streak") {
+      const username =
+        event.chatter_user_name || event.chatter_user_login || "Someone";
+      const streakCount = event.watch_streak?.streak_count || 0;
+      const channelPointsAwarded =
+        event.watch_streak?.channel_points_awarded || 0;
+      const systemMessage = event.system_message || "";
+      const message = event.message?.text || "";
+
+      console.log(
+        `[INFO] Watch streak: ${username} смотрит ${streakCount} стримов подряд`,
+      );
+
+      await handleEvent("watchStreak", {
+        username,
+        user: username,
+        userId: event.chatter_user_id || "",
+        streakCount: String(streakCount),
+        channelPointsAwarded: String(channelPointsAwarded),
+        systemMessage,
+        message,
+      });
+    }
   } else if (subscriptionType === "channel.raid") {
     const fromUser = event.from_broadcaster_user_name;
     const viewers = event.viewers;
     console.log(`[INFO] Рейд от ${fromUser} с ${viewers} зрителями`);
+    queueRaidShoutout(fromUser);
     await handleEvent("raid", {
       username: fromUser,
       user: fromUser,
@@ -2345,6 +2687,15 @@ async function subscribeToAllEvents() {
       type: "channel.raid",
       version: "1",
       condition: { to_broadcaster_user_id: channelId },
+      token: broadcasterToken,
+    },
+    {
+      type: "channel.chat.notification",
+      version: "1",
+      condition: {
+        broadcaster_user_id: channelId,
+        user_id: channelId,
+      },
       token: broadcasterToken,
     },
   ];
@@ -2766,7 +3117,9 @@ async function initializeBot() {
           console.log(
             `[INFO] IRC: Награда ${customRewardId} от ${displayName}: "${message}"`,
           );
-          await handleReward(customRewardId, displayName, message);
+          await handleReward(customRewardId, displayName, message, {
+            source: "irc",
+          });
           return;
         }
 
@@ -2935,7 +3288,7 @@ app.get("/api/auth/twitch/broadcaster", (req, res) => {
     `&redirect_uri=${REDIRECT_URI}` +
     `&response_type=code` +
     `&force_verify=true` +
-    `&scope=moderator:read:followers%20channel:read:subscriptions%20channel:read:redemptions%20moderator:read:shoutouts%20moderator:manage:shoutouts%20bits:read` +
+    `&scope=moderator:read:followers%20channel:read:subscriptions%20channel:read:redemptions%20moderator:read:shoutouts%20moderator:manage:shoutouts%20bits:read%20user:read:chat` +
     `&state=${state}`;
 
   res.json({ url: authUrl });
@@ -3042,15 +3395,24 @@ app.get("/api/auth/callback", async (req, res) => {
       isBroadcaster ? "стримера" : "бота",
     );
 
+    const tokenOwner = await validateToken(tokenData.access_token);
+    if (!tokenOwner.valid || !tokenOwner.login) {
+      console.warn(
+        "[OAuth] Не удалось определить владельца токена, имя пользователя не будет обновлено",
+      );
+    }
+
     const config = loadFullConfig();
     if (!config.tokens) config.tokens = {};
 
     if (isBroadcaster) {
       config.tokens.broadcasterAccessToken = tokenData.access_token;
       config.tokens.broadcasterRefreshToken = tokenData.refresh_token;
+      if (tokenOwner.login) config.tokens.channelName = tokenOwner.login;
     } else {
       config.tokens.accessToken = tokenData.access_token;
       config.tokens.refreshToken = tokenData.refresh_token;
+      if (tokenOwner.login) config.tokens.botUsername = tokenOwner.login;
     }
 
     await saveFullConfig(config);
@@ -3185,9 +3547,36 @@ app.get("/api/config", (req, res) => {
 app.post("/api/config", async (req, res) => {
   try {
     console.log("[DEBUG] Получен конфиг для сохранения");
+    const nextConfig = req.body;
+    const currentConfig = loadFullConfig();
 
-    if (req.body.periodicEvents) {
-      for (const [key, event] of Object.entries(req.body.periodicEvents)) {
+    if (nextConfig.tokens) {
+      const currentTokens = currentConfig.tokens || {};
+      const nextTokens = nextConfig.tokens;
+
+      if (
+        nextTokens.accessToken &&
+        !nextTokens.botUsername &&
+        currentTokens.botUsername
+      ) {
+        nextTokens.botUsername = currentTokens.botUsername;
+      }
+
+      if (
+        nextTokens.broadcasterAccessToken &&
+        !nextTokens.channelName &&
+        currentTokens.channelName
+      ) {
+        nextTokens.channelName = currentTokens.channelName;
+      }
+
+      if (!nextTokens.clientId && currentTokens.clientId) {
+        nextTokens.clientId = currentTokens.clientId;
+      }
+    }
+
+    if (nextConfig.periodicEvents) {
+      for (const [key, event] of Object.entries(nextConfig.periodicEvents)) {
         if (event.interval && event.interval < 10) {
           event.interval = 10;
           console.log(
@@ -3197,10 +3586,10 @@ app.post("/api/config", async (req, res) => {
       }
     }
 
-    const success = await saveFullConfig(req.body);
+    const success = await saveFullConfig(nextConfig);
 
     if (success) {
-      FULL_CONFIG = req.body;
+      FULL_CONFIG = nextConfig;
       updateFromConfig();
 
       if (tokensValid) {
@@ -3622,30 +4011,53 @@ app.post("/api/eventsub/reconnect", (req, res) => {
   res.json({ success: true, message: "EventSub переподключается..." });
 });
 app.get("/api/shoutout/status", (req, res) => {
+  const queueDetails = getQueueDetails();
   res.json({
     success: true,
-    done: Array.from(shoutoutDone),
-    queue: [...shoutoutQueue],
+    done: getDoneShoutoutUsers(),
+    doneDetails: getDoneShoutoutDetails(),
+    queue: queueDetails.map((item) => item.username),
+    queueDetails,
     cooldownUntil: shoutoutCooldownUntil,
     cooldownRemaining: Math.max(0, shoutoutCooldownUntil - Date.now()),
     processing: shoutoutProcessing,
+    settings: loadShoutoutSettings(),
   });
 });
 app.post("/api/shoutout/reset", (req, res) => {
-  shoutoutDone.clear();
+  shoutoutDoneBySource.message.clear();
+  shoutoutDoneBySource.raid.clear();
   console.log("[INFO] Список выполненных shoutout сброшен");
   res.json({ success: true });
+});
+app.delete("/api/shoutout/queue/:itemId", (req, res) => {
+  const result = removeShoutoutQueueItem(req.params.itemId);
+
+  if (result.inProgress) {
+    return res.status(409).json({
+      success: false,
+      error: "Этот shoutout уже отправляется в Twitch, его нельзя отменить",
+      item: result.inProgress,
+    });
+  }
+
+  if (!result.removed) {
+    return res.status(404).json({
+      success: false,
+      error: "Запись в очереди не найдена",
+    });
+  }
+
+  res.json({
+    success: true,
+    removed: result.removed,
+    queueDetails: getQueueDetails(),
+  });
 });
 app.post("/api/shoutout/trigger", async (req, res) => {
   const { username } = req.body;
   if (!username) return res.status(400).json({ error: "Укажите username" });
-  if (
-    !shoutoutQueue.some((name) => name.toLowerCase() === username.toLowerCase())
-  ) {
-    shoutoutQueue.push(username);
-    console.log(`[INFO] Ручной shoutout для ${username} добавлен в очередь`);
-    processShoutoutQueue();
-  }
+  queueManualShoutout(username);
   res.json({
     success: true,
     message: `${username} добавлен в очередь shoutout`,
@@ -3695,6 +4107,16 @@ app.post("/api/events/:eventType/test", async (req, res) => {
       user: "TestRaider",
       viewers: "42",
       fromUserId: "12345",
+    },
+    watchStreak: {
+      username: "TestStreaker",
+      user: "TestStreaker",
+      userId: "12345",
+      streakCount: "120",
+      channelPointsAwarded: "450",
+      systemMessage:
+        "TestStreaker watched 120 consecutive streams and sparked a watch streak!",
+      message: "",
     },
   };
   const data = testData[eventType] || {

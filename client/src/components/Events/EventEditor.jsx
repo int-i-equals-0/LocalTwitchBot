@@ -38,6 +38,8 @@ function EventEditor({ eventType, config, meta, onUpdate, overlays = [] }) {
         return 'Bits / Cheer';
       case 'raid':
         return 'Рейд';
+      case 'watchStreak':
+        return 'Watch Streak';
       default:
         return meta.name || eventType;
     }

@@ -28,6 +28,8 @@ function MainContent({
   setEvents,
   autoshoutout,
   setAutoshoutout,
+  shoutoutSettings,
+  setShoutoutSettings,
   periodicEvents,
   setPeriodicEvents,
   banWords,
@@ -92,6 +94,8 @@ function MainContent({
             key={`shoutouts-${configVersion}`}
             autoshoutout={autoshoutout}
             onUpdate={setAutoshoutout}
+            shoutoutSettings={shoutoutSettings}
+            onSettingsUpdate={setShoutoutSettings}
           />
         );
       case 'periodic':

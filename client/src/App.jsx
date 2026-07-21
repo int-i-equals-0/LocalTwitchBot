@@ -26,10 +26,21 @@ const OBS_DEFAULTS = {
   browserSources: [],
 };
 
+const SHOUTOUT_SETTINGS_DEFAULTS = {
+  raidMode: 'none',
+};
+
 function normalizeObsConfig(obs) {
   return {
     ...OBS_DEFAULTS,
     ...(obs || {}),
+  };
+}
+
+function normalizeShoutoutSettings(settings) {
+  return {
+    ...SHOUTOUT_SETTINGS_DEFAULTS,
+    ...(settings || {}),
   };
 }
 
@@ -75,6 +86,7 @@ function AppContent() {
   const [rewards, setRewards] = useState({});
   const [events, setEvents] = useState({});
   const [autoshoutout, setAutoshoutout] = useState([]);
+  const [shoutoutSettings, setShoutoutSettings] = useState(SHOUTOUT_SETTINGS_DEFAULTS);
   const [periodicEvents, setPeriodicEvents] = useState({});
   const [banWords, setBanWords] = useState([]);
   const [overlays, setOverlays] = useState([]);
@@ -92,6 +104,7 @@ function AppContent() {
       if (data.rewards) setRewards(data.rewards);
       if (data.events) setEvents(data.events);
       if (data.autoshoutout) setAutoshoutout(data.autoshoutout);
+      setShoutoutSettings(normalizeShoutoutSettings(data.shoutoutSettings));
       if (data.periodicEvents) setPeriodicEvents(data.periodicEvents);
       if (data.banwords) setBanWords(data.banwords.words || []);
       if (data.overlays) setOverlays(data.overlays);
@@ -123,6 +136,7 @@ function AppContent() {
         rewards,
         events,
         autoshoutout,
+        shoutoutSettings,
         obs: syncObsBrowserSourcesWithOverlays(obs, overlays),
         notes,
       };
@@ -156,6 +170,7 @@ function AppContent() {
         rewards,
         events,
         autoshoutout,
+        shoutoutSettings,
         obs: syncObsBrowserSourcesWithOverlays(obs, overlays),
         notes,
         ...partialUpdate,
@@ -173,7 +188,7 @@ function AppContent() {
     } catch (error) {
       console.error('Ошибка автосохранения:', error);
     }
-  }, [tokens, commands, banWords, periodicEvents, overlays, rewards, events, autoshoutout, obs, notes]);
+  }, [tokens, commands, banWords, periodicEvents, overlays, rewards, events, autoshoutout, shoutoutSettings, obs, notes]);
 
   const autoSaveNotes = useCallback(
     (nextNotes) => {
@@ -197,6 +212,7 @@ function AppContent() {
     if (config.rewards) { setRewards(config.rewards); updated = true; }
     if (config.events) { setEvents(config.events); updated = true; }
     if (config.autoshoutout) { setAutoshoutout(config.autoshoutout); updated = true; }
+    if (config.shoutoutSettings) { setShoutoutSettings(normalizeShoutoutSettings(config.shoutoutSettings)); updated = true; }
     if (config.periodicEvents) { setPeriodicEvents(config.periodicEvents); updated = true; }
     if (config.banwords) { setBanWords(config.banwords.words || []); updated = true; }
     if (config.overlays) { setOverlays(config.overlays); updated = true; }
@@ -247,6 +263,8 @@ function AppContent() {
         setEvents={setEvents}
         autoshoutout={autoshoutout}
         setAutoshoutout={setAutoshoutout}
+        shoutoutSettings={shoutoutSettings}
+        setShoutoutSettings={setShoutoutSettings}
         periodicEvents={periodicEvents}
         setPeriodicEvents={setPeriodicEvents}
         banWords={banWords}
