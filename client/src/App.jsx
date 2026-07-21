@@ -14,6 +14,7 @@ const TABS = {
   SHOUTOUTS: 'shoutouts',
   PERIODIC: 'periodic',
   BANWORDS: 'banwords',
+  NOTES: 'notes',
   LOGS: 'logs'
 };
 
@@ -78,6 +79,7 @@ function AppContent() {
   const [banWords, setBanWords] = useState([]);
   const [overlays, setOverlays] = useState([]);
   const [obs, setObs] = useState(OBS_DEFAULTS);
+  const [notes, setNotes] = useState([]);
   const [configVersion, setConfigVersion] = useState(0);
 
   const loadFullConfig = useCallback(async () => {
@@ -95,6 +97,7 @@ function AppContent() {
       if (data.overlays) setOverlays(data.overlays);
 
       setObs(normalizeObsConfig(data.obs));
+      if (data.notes) setNotes(data.notes);
 
       setConfigVersion(prev => prev + 1);
     } catch (error) {
@@ -121,6 +124,7 @@ function AppContent() {
         events,
         autoshoutout,
         obs: syncObsBrowserSourcesWithOverlays(obs, overlays),
+        notes,
       };
 
       const response = await fetch('http://127.0.0.1:3001/api/config', {
@@ -141,6 +145,50 @@ function AppContent() {
     }
   };
 
+  const autoSaveConfig = useCallback(async (partialUpdate) => {
+    try {
+      const currentConfig = {
+        tokens,
+        commands,
+        banwords: { words: banWords },
+        periodicEvents,
+        overlays,
+        rewards,
+        events,
+        autoshoutout,
+        obs: syncObsBrowserSourcesWithOverlays(obs, overlays),
+        notes,
+        ...partialUpdate,
+      };
+
+      const response = await fetch('http://127.0.0.1:3001/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentConfig),
+      });
+
+      if (!response.ok) {
+        console.error('Автосохранение не удалось');
+      }
+    } catch (error) {
+      console.error('Ошибка автосохранения:', error);
+    }
+  }, [tokens, commands, banWords, periodicEvents, overlays, rewards, events, autoshoutout, obs, notes]);
+
+  const autoSaveNotes = useCallback(
+    (nextNotes) => {
+      autoSaveConfig({ notes: nextNotes });
+    },
+    [autoSaveConfig],
+  );
+
+  const autoSaveTokens = useCallback(
+    (nextTokens) => {
+      autoSaveConfig({ tokens: nextTokens });
+    },
+    [autoSaveConfig],
+  );
+
   const loadConfigFromFile = (config) => {
     let updated = false;
 
@@ -152,6 +200,7 @@ function AppContent() {
     if (config.periodicEvents) { setPeriodicEvents(config.periodicEvents); updated = true; }
     if (config.banwords) { setBanWords(config.banwords.words || []); updated = true; }
     if (config.overlays) { setOverlays(config.overlays); updated = true; }
+    if (config.notes) { setNotes(config.notes); updated = true; }
 
     // Для старых конфигов obs может отсутствовать — это нормально
     if (Object.prototype.hasOwnProperty.call(config, 'obs')) {
@@ -202,7 +251,11 @@ function AppContent() {
         setPeriodicEvents={setPeriodicEvents}
         banWords={banWords}
         setBanWords={setBanWords}
+        notes={notes}
+        setNotes={setNotes}
         configVersion={configVersion}
+        autoSaveNotes={autoSaveNotes}
+        autoSaveTokens={autoSaveTokens}
       />
     </div>
   );

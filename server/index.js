@@ -317,6 +317,7 @@ function loadFullConfig() {
       if (!configData.rewards) configData.rewards = {};
       if (!configData.autoshoutout) configData.autoshoutout = [];
       if (!configData.events) configData.events = {};
+      if (!configData.notes) configData.notes = [];
       if (!configData.obs)
         configData.obs = {
           enabled: false,
@@ -339,6 +340,7 @@ function loadFullConfig() {
     rewards: {},
     autoshoutout: [],
     events: {},
+    notes: [],
     obs: {
       enabled: false,
       url: "ws://127.0.0.1:4455",
@@ -3079,6 +3081,58 @@ app.post("/api/auth/refresh/:type", async (req, res) => {
     res
       .status(500)
       .json({ success: false, error: "Не удалось обновить токен" });
+  }
+});
+
+app.post("/api/auth/logout/:type", async (req, res) => {
+  const { type } = req.params;
+  if (type !== "bot" && type !== "broadcaster") {
+    return res.status(400).json({ error: 'type должен быть "bot" или "broadcaster"' });
+  }
+
+  try {
+    const config = loadFullConfig();
+    if (!config.tokens) config.tokens = {};
+
+    if (type === "bot") {
+      delete config.tokens.accessToken;
+      delete config.tokens.refreshToken;
+      delete config.tokens.botUsername;
+      // Опционально: сбросить глобальные переменные (если бот был подключен)
+      OAUTH_TOKEN = "";
+      CONFIG.oauthToken = "";
+      BOT_USERNAME = "";
+      if (twitchClient) {
+        twitchClient.disconnect().catch(() => {});
+        twitchClient = null;
+      }
+    } else {
+      delete config.tokens.broadcasterAccessToken;
+      delete config.tokens.broadcasterRefreshToken;
+      delete config.tokens.channelName;
+      BROADCASTER_TOKEN = "";
+      CHANNEL_NAME = "";
+      // Отключаем EventSub, если он был поднят
+      disconnectEventSub();
+    }
+
+    await saveFullConfig(config);
+    FULL_CONFIG = config;
+    updateFromConfig();
+
+    // Проверяем, остались ли валидные токены
+    const tokenCheck = hasRequiredTokens();
+    tokensValid = tokenCheck.valid;
+
+    res.json({
+      success: true,
+      message: `Токены ${type} удалены`,
+      tokensValid,
+      missingTokens: tokenCheck.missing || []
+    });
+  } catch (error) {
+    console.error(`[ERROR] Ошибка выхода ${type}:`, error);
+    res.status(500).json({ error: error.message });
   }
 });
 

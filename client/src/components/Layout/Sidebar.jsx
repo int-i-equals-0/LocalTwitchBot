@@ -13,6 +13,7 @@ const MENU_ITEMS = [
   { id: 'periodic', label: 'Периодическое', icon: FaClock },
   { id: 'shoutouts', label: 'Шатауты', icon: FaBullhorn },
   { id: 'banwords', label: 'Банворды', icon: FaBan },
+  { id: 'notes', label: 'Заметки', icon: FaFileAlt },
   { id: 'logs', label: 'Логи', icon: FaFileAlt }
 ];
 

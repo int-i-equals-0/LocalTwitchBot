@@ -6,7 +6,7 @@ import Tooltip from '../Tooltip';
 import { useNotification, NOTIFICATION_TYPES } from '../Notification';
 import './OAuthTab.css';
 
-function OAuthTab({ tokens, onUpdate }) {
+function OAuthTab({ tokens, onUpdate, onAutoSave }) {
   const { showNotification, showConfirm } = useNotification();
   const [broadcasterInfo, setBroadcasterInfo] = useState(null);
   const [botInfo, setBotInfo] = useState(null);
@@ -49,12 +49,16 @@ function OAuthTab({ tokens, onUpdate }) {
         if (type === 'broadcaster') {
           setBroadcasterInfo(userInfo);
           if (userInfo.login !== tokens.channelName) {
-            onUpdate({ ...tokens, channelName: userInfo.login });
+            const updated = { ...tokens, channelName: userInfo.login };
+            onUpdate(updated);
+            if (onAutoSave) onAutoSave(updated);
           }
         } else {
           setBotInfo(userInfo);
           if (userInfo.login !== tokens.botUsername) {
-            onUpdate({ ...tokens, botUsername: userInfo.login });
+            const updated = { ...tokens, botUsername: userInfo.login };
+            onUpdate(updated);
+            if (onAutoSave) onAutoSave(updated);
           }
         }
         
@@ -87,7 +91,7 @@ function OAuthTab({ tokens, onUpdate }) {
       setLoading(prev => ({ ...prev, [type]: false }));
       setInitialLoadComplete(prev => ({ ...prev, [type]: true }));
     }
-  }, [tokens, onUpdate, showNotification]);
+  }, [tokens, onUpdate, onAutoSave, showNotification]);
 
   useEffect(() => {
     if (tokens.broadcasterAccessToken) {
@@ -246,40 +250,56 @@ function OAuthTab({ tokens, onUpdate }) {
     }
   };
 
-  const logoutAccount = (type) => {
+  const logoutAccount = async (type) => {
     const typeName = type === 'broadcaster' ? 'стримера' : 'бота';
     const warningText = type === 'broadcaster'
       ? 'Вы действительно хотите удалить авторизацию стримера?\n\nБот потеряет доступ к событиям (подписки, фолловеры, награды) до повторной авторизации.'
       : 'Вы действительно хотите удалить авторизацию бота?\n\nБот перестанет отвечать в чате до повторной авторизации.';
 
     showConfirm(warningText, async () => {
-      showNotification(
-        `🗑️ Удаление авторизации ${typeName}...`,
-        NOTIFICATION_TYPES.INFO,
-        1000
-      );
+      showNotification(`🗑️ Удаление авторизации ${typeName}...`, NOTIFICATION_TYPES.INFO, 1000);
 
-      const updated = { ...tokens };
+      try {
+        const response = await fetch(`http://127.0.0.1:3001/api/auth/logout/${type}`, {
+          method: 'POST'
+        });
+        const data = await response.json();
 
-      if (type === 'broadcaster') {
-        delete updated.broadcasterAccessToken;
-        delete updated.broadcasterRefreshToken;
-        delete updated.channelName;
-        setBroadcasterInfo(null);
-      } else {
-        delete updated.accessToken;
-        delete updated.refreshToken;
-        delete updated.botUsername;
-        setBotInfo(null);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Неизвестная ошибка сервера');
+        }
+
+        const updated = { ...tokens };
+        if (type === 'broadcaster') {
+          delete updated.broadcasterAccessToken;
+          delete updated.broadcasterRefreshToken;
+          delete updated.channelName;
+          setBroadcasterInfo(null);
+        } else {
+          delete updated.accessToken;
+          delete updated.refreshToken;
+          delete updated.botUsername;
+          setBotInfo(null);
+        }
+
+        onUpdate(updated);
+
+        showNotification(
+          `✅ Авторизация ${typeName} удалена. Страница будет перезагружена.`,
+          NOTIFICATION_TYPES.SUCCESS,
+          3000
+        );
+
+        setTimeout(() => window.location.reload(), 1500);
+
+      } catch (error) {
+        console.error('Ошибка выхода:', error);
+        showNotification(
+          `❌ Ошибка при удалении авторизации ${typeName}: ${error.message}`,
+          NOTIFICATION_TYPES.ERROR,
+          5000
+        );
       }
-
-      onUpdate(updated);
-
-      showNotification(
-        `🗑️ Авторизация ${typeName} удалена. Перезапустите сервер для применения изменений.`,
-        NOTIFICATION_TYPES.WARNING,
-        5000
-      );
     });
   };
 

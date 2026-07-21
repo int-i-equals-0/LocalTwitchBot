@@ -8,6 +8,7 @@ import EventsTab from '../Events/EventsTab';
 import ShoutoutsTab from '../Shoutouts/ShoutoutsTab';
 import PeriodicTab from '../Periodic/PeriodicTab';
 import BanWordsTab from '../BanWords/BanWordsTab';
+import NotesTab from '../Notes/NotesTab';
 import LogsTab from '../Logs/LogsTab';
 import './MainContent.css';
 
@@ -31,7 +32,11 @@ function MainContent({
   setPeriodicEvents,
   banWords,
   setBanWords,
-  configVersion
+  notes,
+  setNotes,
+  configVersion,
+  autoSaveNotes,
+  autoSaveTokens,
 }) {
   const renderContent = () => {
     switch (activeTab) {
@@ -41,6 +46,7 @@ function MainContent({
             key={`oauth-${configVersion}`}
             tokens={tokens}
             onUpdate={setTokens}
+            onAutoSave={autoSaveTokens}
           />
         );
       case 'overlays':
@@ -103,6 +109,15 @@ function MainContent({
             key={`banwords-${configVersion}`}
             words={banWords}
             onUpdate={setBanWords}
+          />
+        );
+      case 'notes':
+        return (
+          <NotesTab
+            key={`notes-${configVersion}`}
+            notes={notes}
+            onUpdate={setNotes}
+            onAutoSave={autoSaveNotes}
           />
         );
       case 'logs':
