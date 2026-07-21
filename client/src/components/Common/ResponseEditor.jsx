@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import ChatEditor from './ChatEditor';
-import MediaEditor from './MediaEditor';
+import MediaEditor from './MediaEditor/MediaEditor';
 import AliasEditor from './AliasEditor';
 import './ResponseEditor.css';
 

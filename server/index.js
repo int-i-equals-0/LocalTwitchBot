@@ -51,7 +51,10 @@ function getLogFileName() {
 }
 
 const LOG_FILE_PATH = getLogFileName();
-const logFileStream = fs.createWriteStream(LOG_FILE_PATH, { flags: "a", encoding: "utf8" });
+const logFileStream = fs.createWriteStream(LOG_FILE_PATH, {
+  flags: "a",
+  encoding: "utf8",
+});
 
 logFileStream.on("error", (err) => {
   process.stderr.write(`[LOG FILE ERROR] ${err.message}\n`);
@@ -1100,19 +1103,24 @@ async function buildMessageFromComponents(
 }
 
 function hasPermission(userTags, perms) {
-    if (!perms || perms.length === 0) return true;
-    
-    const isBroadcaster = userTags.username?.toLowerCase() === CHANNEL_NAME?.toLowerCase();
-    
-    for (const p of perms) {
-        if (p === 'everyone') return true;
-        if (p === 'broadcaster' && isBroadcaster) return true;
-        if (p === 'moderators' && userTags.mod) return true;
-        if (p === 'vips' && userTags.vip) return true;
-        if (p === 'subscribers' && userTags.subscriber) return true;
-        if (p.startsWith('user:') && p.replace('user:', '').toLowerCase() === userTags.username?.toLowerCase()) return true;
-    }
-    return false;
+  if (!perms || perms.length === 0) return true;
+
+  const isBroadcaster =
+    userTags.username?.toLowerCase() === CHANNEL_NAME?.toLowerCase();
+
+  for (const p of perms) {
+    if (p === "everyone") return true;
+    if (p === "broadcaster" && isBroadcaster) return true;
+    if (p === "moderators" && userTags.mod) return true;
+    if (p === "vips" && userTags.vip) return true;
+    if (p === "subscribers" && userTags.subscriber) return true;
+    if (
+      p.startsWith("user:") &&
+      p.replace("user:", "").toLowerCase() === userTags.username?.toLowerCase()
+    )
+      return true;
+  }
+  return false;
 }
 
 // ========== ВЫПОЛНЕНИЕ ДЕЙСТВИЯ ==========
@@ -1154,6 +1162,7 @@ async function executeAction(
 
     const mediaData = {
       videoFile: media.file,
+      secondaryFile: media.secondaryFile || null, // <-- НОВОЕ
       volume: media.volume || 100,
       animation: {
         enter: anim.enter || "none",
@@ -1217,35 +1226,38 @@ function getDeduplicationKey(rewardId, username, timestamp) {
 setInterval(() => {
   const now = Date.now();
   let cleanedCount = 0;
-  
+
   for (const [key, time] of handledRewards.entries()) {
-    if (now - time > 30000) { // 30 секунд
+    if (now - time > 30000) {
+      // 30 секунд
       handledRewards.delete(key);
       cleanedCount++;
     }
   }
-  
+
   if (cleanedCount > 0) {
-    console.log(`[INFO] Очистка кэша наград: удалено ${cleanedCount} записей (осталось ${handledRewards.size})`);
+    console.log(
+      `[INFO] Очистка кэша наград: удалено ${cleanedCount} записей (осталось ${handledRewards.size})`,
+    );
   }
 }, 10000); // Проверяем каждые 10 секунд
 
 async function handleReward(rewardId, username, userMessage) {
   const now = Date.now();
   const dedupKey = getDeduplicationKey(rewardId, username, now);
-  
+
   // Проверка на дубликат (мёртвая зона 150 мс)
   const lastHandled = handledRewards.get(dedupKey);
   if (lastHandled && now - lastHandled < 150) {
     console.log(
-      `[INFO] Награда ${rewardId} от ${username} — дубликат (${now - lastHandled}ms), пропуск`
+      `[INFO] Награда ${rewardId} от ${username} — дубликат (${now - lastHandled}ms), пропуск`,
     );
     return true;
   }
-  
+
   // Сохраняем запись о обработке
   handledRewards.set(dedupKey, now);
-  
+
   // Дополнительная очистка: если записей слишком много, принудительно чистим старые
   if (handledRewards.size > 500) {
     const threshold = now - 30000;
@@ -1257,7 +1269,9 @@ async function handleReward(rewardId, username, userMessage) {
       }
     }
     if (cleanedCount > 0) {
-      console.log(`[INFO] Принудительная очистка кэша наград: удалено ${cleanedCount} записей (осталось ${handledRewards.size})`);
+      console.log(
+        `[INFO] Принудительная очистка кэша наград: удалено ${cleanedCount} записей (осталось ${handledRewards.size})`,
+      );
     }
   }
 
@@ -1308,7 +1322,7 @@ async function handleRewardWithBuffer(
 ) {
   if (!eventSubWs || eventSubWs.readyState !== WebSocket.OPEN) {
     console.log(
-      `[INFO] EventSub не готов (state: ${eventSubWs?.readyState || "null"}), буферизируем награду от ${username}`
+      `[INFO] EventSub не готов (state: ${eventSubWs?.readyState || "null"}), буферизируем награду от ${username}`,
     );
     bufferReward(rewardId, username, userMessage, eventId);
     return true;
@@ -2556,9 +2570,12 @@ app.get("/api/media-files/:filename/probe", async (req, res) => {
     let detectedCodec = null;
     let mediaType = "unknown";
 
-    if (["mp4", "webm", "mov", "avi", "mkv", "flv", "m4v"].includes(ext)) mediaType = "video";
-    else if (["mp3", "wav", "ogg", "m4a", "flac", "aac"].includes(ext)) mediaType = "audio";
-    else if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext)) mediaType = "image";
+    if (["mp4", "webm", "mov", "avi", "mkv", "flv", "m4v"].includes(ext))
+      mediaType = "video";
+    else if (["mp3", "wav", "ogg", "m4a", "flac", "aac"].includes(ext))
+      mediaType = "audio";
+    else if (["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(ext))
+      mediaType = "image";
 
     // Для видеофайлов — пытаемся определить кодек по заголовку
     if (mediaType === "video") {
@@ -2574,9 +2591,12 @@ app.get("/api/media-files/:filename/probe", async (req, res) => {
         if (headerAscii.includes("hvc1") || headerAscii.includes("hev1")) {
           detectedCodec = "H.265/HEVC";
           warnings.push(
-            "Видео использует кодек H.265/HEVC. Большинство браузеров не поддерживают этот кодек. Рекомендуется перекодировать в H.264 (MP4)."
+            "Видео использует кодек H.265/HEVC. Большинство браузеров не поддерживают этот кодек. Рекомендуется перекодировать в H.264 (MP4).",
           );
-        } else if (headerAscii.includes("avc1") || headerAscii.includes("avc3")) {
+        } else if (
+          headerAscii.includes("avc1") ||
+          headerAscii.includes("avc3")
+        ) {
           detectedCodec = "H.264/AVC";
         } else if (headerAscii.includes("vp08")) {
           detectedCodec = "VP8";
@@ -2585,7 +2605,7 @@ app.get("/api/media-files/:filename/probe", async (req, res) => {
         } else if (headerAscii.includes("av01")) {
           detectedCodec = "AV1";
           warnings.push(
-            "Видео использует кодек AV1. Поддержка может быть ограничена в старых браузерах."
+            "Видео использует кодек AV1. Поддержка может быть ограничена в старых браузерах.",
           );
         }
       } catch (e) {
@@ -2593,25 +2613,37 @@ app.get("/api/media-files/:filename/probe", async (req, res) => {
       }
 
       if (ext === "mkv") {
-        warnings.push("Формат MKV имеет ограниченную поддержку в браузерах. Рекомендуется MP4 или WebM.");
+        warnings.push(
+          "Формат MKV имеет ограниченную поддержку в браузерах. Рекомендуется MP4 или WebM.",
+        );
       }
       if (ext === "avi") {
-        warnings.push("Формат AVI не поддерживается браузерами. Необходимо конвертировать в MP4 или WebM.");
+        warnings.push(
+          "Формат AVI не поддерживается браузерами. Необходимо конвертировать в MP4 или WebM.",
+        );
       }
       if (ext === "flv") {
-        warnings.push("Формат FLV не поддерживается браузерами. Необходимо конвертировать в MP4 или WebM.");
+        warnings.push(
+          "Формат FLV не поддерживается браузерами. Необходимо конвертировать в MP4 или WebM.",
+        );
       }
       if (ext === "mov") {
-        warnings.push("Формат MOV может не поддерживаться во всех браузерах. Рекомендуется MP4.");
+        warnings.push(
+          "Формат MOV может не поддерживаться во всех браузерах. Рекомендуется MP4.",
+        );
       }
     }
 
     if (mediaType === "audio") {
       if (ext === "flac") {
-        warnings.push("Формат FLAC может не поддерживаться во всех браузерах. Рекомендуется MP3 или OGG.");
+        warnings.push(
+          "Формат FLAC может не поддерживаться во всех браузерах. Рекомендуется MP3 или OGG.",
+        );
       }
       if (ext === "aac") {
-        warnings.push("Формат AAC может требовать контейнер M4A для воспроизведения в браузере.");
+        warnings.push(
+          "Формат AAC может требовать контейнер M4A для воспроизведения в браузере.",
+        );
       }
     }
 
